@@ -1,0 +1,8 @@
+# general
+**/venv/
+
+# JetBrains
+**/.idea/
+
+# local
+crafting-interpreters/
