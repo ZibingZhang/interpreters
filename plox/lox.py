@@ -1,6 +1,13 @@
+from __future__ import annotations
 import sys
-from typing import List
+from typing import TYPE_CHECKING, List
+import parser as parse
 import scanner as scan
+from tokens import TokenType
+from expr import ASTPrinter
+
+if TYPE_CHECKING:
+    from tokens import Token
 
 
 class Lox:
@@ -36,11 +43,24 @@ class Lox:
         if Lox.had_error:
             sys.exit(100)
         scanner = scan.Scanner(source)
-        tokens = scanner.tokens
+        parser = parse.Parser(scanner.scan())
+        expr = parser.parse()
+
+        if self.had_error:
+            return
+
+        print(expr.accept(ASTPrinter()))
 
     @staticmethod
-    def error(line: int, msg: str):
+    def error_line(line: int, msg: str):
         Lox._report(line, '', msg)
+
+    @staticmethod
+    def error_token(token: Token, msg: str):
+        if token.type == TokenType.EOF:
+            Lox._report(token.line, ' at end', msg)
+        else:
+            Lox._report(token.line, f" at '{token.lexeme}'", msg)
 
     @staticmethod
     def _report(line: int, where: str, msg: str):

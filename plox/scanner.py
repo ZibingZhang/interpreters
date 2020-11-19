@@ -36,12 +36,12 @@ class Scanner:
     def _is_at_end(self) -> bool:
         return self._current >= len(self._source)
 
-    @cached_property
-    def tokens(self) -> List[Token]:
+    def scan(self) -> List[Token]:
         while not self._is_at_end:
             # starting a new lexeme
             self._start = self._current
             self._scan_token()
+        self._add_token(TokenType.EOF)
         return self._tokens
 
     def _scan_token(self) -> None:
@@ -54,6 +54,8 @@ class Scanner:
             self._add_token(TokenType.LEFT_BRACE)
         elif c == '}':
             self._add_token(TokenType.RIGHT_PAREN)
+        elif c == ':':
+            self._add_token(TokenType.COLON)
         elif c == ',':
             self._add_token(TokenType.COMMA)
         elif c == '.':
@@ -62,6 +64,8 @@ class Scanner:
             self._add_token(TokenType.MINUS)
         elif c == '+':
             self._add_token(TokenType.PLUS)
+        elif c == '?':
+            self._add_token(TokenType.QUESTION)
         elif c == ';':
             self._add_token(TokenType.SEMICOLON)
         elif c == '*':
@@ -93,7 +97,7 @@ class Scanner:
         elif c == '"':
             self._string()
         else:
-            lox.Lox.error(self._line, f'Unexpected character, {c}.')
+            lox.Lox.error_line(self._line, f'Unexpected character, {c}.')
 
     def _line_comment(self) -> None:
         while self._peek() != '\n' and not self._is_at_end:
@@ -128,7 +132,7 @@ class Scanner:
             self._advance()
 
         if self._is_at_end:
-            lox.Lox.error(self._line, 'Unterminated string.')
+            lox.Lox.error_line(self._line, 'Unterminated string.')
 
         # closing "
         self._advance()

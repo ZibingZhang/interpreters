@@ -1,0 +1,17 @@
+Grammar (Extended Backus–Naur Form)
+===================================
+expression     = sequence ";"
+sequence       = ternary ( "," ternary )* ";"
+ternary        = comparison ( "?" comparison ":" comparison )* ";"
+equality       = comparison ( ( "!=" | "==" ) comparison )* ";"
+comparison     = term ( ( ">" | ">=" | "<" | "<=" ) term )* ";"
+term           = factor ( ( "-" | "+" ) factor )* ";"
+factor         = unary ( ( "/" | "*" ) unary )* ";"
+unary          = ( "!" | "-" ) unary
+               | primary ;
+primary        = NUMBER | STRING | "true" | "false" | "nil"
+               | "(" expression ")" ";"
+
+Additional Rules for Error Checking
+===================================
+unary          | "+" unary

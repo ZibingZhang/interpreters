@@ -28,6 +28,10 @@ class ExprVisitor(abc.ABC):
         ...
 
     @abc.abstractmethod
+    def visit_ternary_expr(self, expr: TernaryExpr) -> Any:
+        ...
+
+    @abc.abstractmethod
     def visit_unary_expr(self, expr: UnaryExpr) -> Any:
         ...
 
@@ -59,6 +63,18 @@ class LiteralExpr(Expr):
 
 
 @dataclass(frozen=True)
+class TernaryExpr(Expr):
+    left: Expr
+    op1: Token
+    center: Expr
+    op2: Token
+    right: Expr
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_ternary_expr(self)
+
+
+@dataclass(frozen=True)
 class UnaryExpr(Expr):
     op: Token
     right: Expr
@@ -78,6 +94,9 @@ class ASTPrinter(ExprVisitor):
         if expr.value is None:
             return 'nil'
         return str(expr.value)
+
+    def visit_ternary_expr(self, expr: TernaryExpr) -> Any:
+        return self._parenthesize(expr.op1.lexeme + expr.op2.lexeme, expr.left, expr.center, expr.right)
 
     def visit_unary_expr(self, expr: UnaryExpr):
         return self._parenthesize(expr.op.lexeme, expr.right)
