@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+import sys
+from lox import Lox
+
+if __name__ == '__main__':
+    lox = Lox()
+    lox.main(sys.argv)
