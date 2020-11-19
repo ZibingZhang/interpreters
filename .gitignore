@@ -1,5 +1,6 @@
 # general
 **/venv/
+**/__pycache__/
 
 # JetBrains
 **/.idea/
