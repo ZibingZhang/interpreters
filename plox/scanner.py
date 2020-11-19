@@ -1,12 +1,11 @@
 from functools import cached_property
 from typing import List
-from token import Token, TokenType
+from tokens import Token, TokenType
 import lox
 from type import Literal
 
 
 class Scanner:
-    # TODO: add support for nested block comments
     _KEYWORDS = {
         'and': TokenType.AND,
         'class': TokenType.CLASS,
@@ -77,7 +76,10 @@ class Scanner:
             self._add_token(TokenType.GREATER_EQUAL if self._match('=') else TokenType.GREATER)
         elif c == '/':
             if self._match('/'):
-                self._comment()
+                self._line_comment()
+            if self._match('*'):
+                raise NotImplementedError('Block comments not yet supported.')
+                # self._block_comment()
             else:
                 self._add_token(TokenType.SLASH)
         elif c in {' ', '\r', '\t'}:
@@ -93,11 +95,10 @@ class Scanner:
         else:
             lox.Lox.error(self._line, f'Unexpected character, {c}.')
 
-    def _comment(self) -> None:
+    def _line_comment(self) -> None:
         while self._peek() != '\n' and not self._is_at_end:
             self._advance()
-        text = self._source[self._start + 2:self._current]
-        self._add_token(TokenType.COMMENT, text)
+        self._add_token(TokenType.COMMENT)
 
     def _identifier(self) -> None:
         while self._peek().isalpha():
