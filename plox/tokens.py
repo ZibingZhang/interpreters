@@ -1,6 +1,10 @@
+from __future__ import annotations
 import enum
+from typing import TYPE_CHECKING
 from dataclasses import dataclass
-from type import Literal
+
+if TYPE_CHECKING:
+    from type import Literal
 
 
 class TokenType(enum.Enum):

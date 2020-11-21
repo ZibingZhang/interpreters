@@ -1,16 +1,35 @@
 Grammar (Extended Backus–Naur Form)
 ===================================
-expression     = sequence ";"
-sequence       = ternary ( "," ternary )* ";"
-ternary        = comparison ( "?" comparison ":" comparison )* ";"
-equality       = comparison ( ( "!=" | "==" ) comparison )* ";"
-comparison     = term ( ( ">" | ">=" | "<" | "<=" ) term )* ";"
-term           = factor ( ( "-" | "+" ) factor )* ";"
-factor         = unary ( ( "/" | "*" ) unary )* ";"
+program        = statement* EOF ;
+
+declaration    = var-decl
+               | statement ;
+
+var-decl       = "var" IDENTIFIER ( "=" expression )? ";" ;
+
+statement      = expr-stmt
+               | print-stmt
+               | block ;
+
+expr-stmt      = expression ";" ;
+print-stmt     = "print" expression ";" ;
+block          = "{" declaration* "}" ;
+
+expression     = assignment ;
+assignment     = IDENTIFIER "=" assignment
+               | sequence ;
+sequence       = ternary ( "," ternary )* ;
+ternary        = equality ( "?" equality ":" equality )* ;
+equality       = comparison ( ( "!=" | "==" ) comparison )* ;
+comparison     = term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term           = factor ( ( "-" | "+" ) factor )* ;
+factor         = unary ( ( "/" | "*" ) unary )* ;
 unary          = ( "!" | "-" ) unary
                | primary ;
-primary        = NUMBER | STRING | "true" | "false" | "nil"
+primary        = "true" | "false" | "nil"
+               | NUMBER | STRING
                | "(" expression ")" ";"
+               | IDENTIFIED ;
 
 Additional Rules for Error Checking
 ===================================

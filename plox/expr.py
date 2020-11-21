@@ -1,11 +1,12 @@
 from __future__ import annotations
 import abc
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
-from type import Literal
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from tokens import Token
+    from type import Literal
+    from typing import Any
 
 
 class Expr(abc.ABC):
@@ -16,28 +17,45 @@ class Expr(abc.ABC):
 
 class ExprVisitor(abc.ABC):
     @abc.abstractmethod
-    def visit_binary_expr(self, expr: BinaryExpr) -> Any:
+    def visit_assign_expr(self, expr: Assign) -> Any:
         ...
 
     @abc.abstractmethod
-    def visit_grouping_expr(self, expr: GroupingExpr) -> Any:
+    def visit_binary_expr(self, expr: Binary) -> Any:
         ...
 
     @abc.abstractmethod
-    def visit_literal_expr(self, expr: LiteralExpr) -> Any:
+    def visit_grouping_expr(self, expr: Grouping) -> Any:
         ...
 
     @abc.abstractmethod
-    def visit_ternary_expr(self, expr: TernaryExpr) -> Any:
+    def visit_literal_expr(self, expr: Literal) -> Any:
         ...
 
     @abc.abstractmethod
-    def visit_unary_expr(self, expr: UnaryExpr) -> Any:
+    def visit_ternary_expr(self, expr: Ternary) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_unary_expr(self, expr: Unary) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_variable_expr(self, expr: Variable) -> Any:
         ...
 
 
 @dataclass(frozen=True)
-class BinaryExpr(Expr):
+class Assign(Expr):
+    name: Token
+    value: Expr
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_assign_expr(self)
+
+
+@dataclass(frozen=True)
+class Binary(Expr):
     left: Expr
     op: Token
     right: Expr
@@ -47,7 +65,7 @@ class BinaryExpr(Expr):
 
 
 @dataclass(frozen=True)
-class GroupingExpr(Expr):
+class Grouping(Expr):
     expr: Expr
 
     def accept(self, visitor: ExprVisitor) -> Any:
@@ -55,7 +73,7 @@ class GroupingExpr(Expr):
 
 
 @dataclass(frozen=True)
-class LiteralExpr(Expr):
+class Literal(Expr):
     value: Literal
 
     def accept(self, visitor: ExprVisitor) -> Any:
@@ -63,7 +81,7 @@ class LiteralExpr(Expr):
 
 
 @dataclass(frozen=True)
-class TernaryExpr(Expr):
+class Ternary(Expr):
     left: Expr
     op1: Token
     center: Expr
@@ -75,7 +93,7 @@ class TernaryExpr(Expr):
 
 
 @dataclass(frozen=True)
-class UnaryExpr(Expr):
+class Unary(Expr):
     op: Token
     right: Expr
 
@@ -83,22 +101,30 @@ class UnaryExpr(Expr):
         return visitor.visit_unary_expr(self)
 
 
+@dataclass(frozen=True)
+class Variable(Expr):
+    name: Token
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_variable_expr(self)
+
+
 class ASTPrinter(ExprVisitor):
-    def visit_binary_expr(self, expr: BinaryExpr):
+    def visit_binary_expr(self, expr: Binary):
         return self._parenthesize(expr.op.lexeme, expr.left, expr.right)
 
-    def visit_grouping_expr(self, expr: GroupingExpr):
+    def visit_grouping_expr(self, expr: Grouping):
         return self._parenthesize('group', expr.expr)
 
-    def visit_literal_expr(self, expr: LiteralExpr):
+    def visit_literal_expr(self, expr: Literal):
         if expr.value is None:
             return 'nil'
         return str(expr.value)
 
-    def visit_ternary_expr(self, expr: TernaryExpr) -> Any:
+    def visit_ternary_expr(self, expr: Ternary) -> Any:
         return self._parenthesize(expr.op1.lexeme + expr.op2.lexeme, expr.left, expr.center, expr.right)
 
-    def visit_unary_expr(self, expr: UnaryExpr):
+    def visit_unary_expr(self, expr: Unary):
         return self._parenthesize(expr.op.lexeme, expr.right)
 
     def _parenthesize(self, name: str, *args: Expr):

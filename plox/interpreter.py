@@ -1,27 +1,37 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
 import lox
+from environment import Environment
 from exceptions import RuntimeException
-from expr import (
-    Expr,
-    ExprVisitor,
-    BinaryExpr,
-    GroupingExpr,
-    LiteralExpr,
-    TernaryExpr,
-    UnaryExpr,
-)
-from tokens import Token, TokenType
-from type import LoxVal
+import expr as ex
+import stmt as st
+from expr import ExprVisitor
+from stmt import StmtVisitor
+from tokens import TokenType
+
+if TYPE_CHECKING:
+    from typing import List
+    from tokens import Token
+    from type import LoxVal
 
 
-class Interpreter(ExprVisitor):
-    def interpret(self, expr: Expr) -> None:
+class Interpreter(ExprVisitor, StmtVisitor):
+    def __init__(self):
+        self._env = Environment()
+
+    def interpret(self, stmts: List[st.Stmt]) -> None:
         try:
-            value = self._evaluate(expr)
-            print(self._stringify(value))
+            for stmt in stmts:
+                self._execute(stmt)
         except RuntimeException as e:
             lox.Lox.error_runtime(e)
 
-    def visit_binary_expr(self, expr: BinaryExpr) -> LoxVal:
+    def visit_assign_expr(self, expr: ex.Assign) -> Any:
+        value = self._evaluate(expr.value)
+        self._env.assign(expr.name, value)
+        return value
+
+    def visit_binary_expr(self, expr: ex.Binary) -> LoxVal:
         left = self._evaluate(expr.left)
         right = self._evaluate(expr.right)
 
@@ -57,17 +67,20 @@ class Interpreter(ExprVisitor):
             if isinstance(left, str) or isinstance(right, str):
                 return self._stringify(left) + self._stringify(right)
             raise RuntimeException(expr.op, 'Incompatible operands.')
+        if expr.op.type is TokenType.COMMA:
+            self._evaluate(expr.left)
+            return self._evaluate(expr.right)
 
         # unreachable
         raise RuntimeError('Unreachable code.')
 
-    def visit_grouping_expr(self, expr: GroupingExpr) -> LoxVal:
+    def visit_grouping_expr(self, expr: ex.Grouping) -> LoxVal:
         return self._evaluate(expr.expr)
 
-    def visit_literal_expr(self, expr: LiteralExpr) -> LoxVal:
+    def visit_literal_expr(self, expr: ex.Literal) -> LoxVal:
         return expr.value
 
-    def visit_ternary_expr(self, expr: TernaryExpr) -> LoxVal:
+    def visit_ternary_expr(self, expr: ex.Ternary) -> LoxVal:
         if expr.op1.type is TokenType.QUESTION and expr.op2.type is TokenType.COLON:
             pred = self._evaluate(expr.left)
             if self._is_truthy(pred):
@@ -78,7 +91,7 @@ class Interpreter(ExprVisitor):
         # unreachable
         raise RuntimeError('Unreachable code.')
 
-    def visit_unary_expr(self, expr: UnaryExpr) -> LoxVal:
+    def visit_unary_expr(self, expr: ex.Unary) -> LoxVal:
         right = self._evaluate(expr.right)
         if expr.op.type is TokenType.MINUS:
             self._check_number_operands(expr.op, right)
@@ -89,7 +102,38 @@ class Interpreter(ExprVisitor):
         # unreachable
         raise RuntimeError('Unreachable code.')
 
-    def _evaluate(self, expr: Expr) -> LoxVal:
+    def visit_variable_expr(self, expr: ex.Variable) -> LoxVal:
+        return self._env.get(expr.name)
+
+    def visit_block_stmt(self, stmt: st.Block) -> None:
+        self._execute_block(stmt.stmts, Environment(self._env))
+
+    def visit_expr_stmt(self, stmt: st.Expr) -> None:
+        self._evaluate(stmt.expr)
+
+    def visit_print_stmt(self, stmt: st.Print) -> None:
+        value = self._evaluate(stmt.expr)
+        print(self._stringify(value))
+
+    def visit_var_stmt(self, stmt: st.Var) -> None:
+        value = None
+        if stmt.initializer is not None:
+            value = self._evaluate(stmt.initializer)
+        self._env.initialize(stmt.name, value)
+
+    def _execute_block(self, stmts: List[st.Stmt], env: Environment) -> None:
+        prev = self._env
+        try:
+            self._env = env
+            for stmt in stmts:
+                self._execute(stmt)
+        finally:
+            self._env = prev
+
+    def _execute(self, stmt: st.Stmt) -> None:
+        stmt.accept(self)
+
+    def _evaluate(self, expr: ex.Expr) -> LoxVal:
         return expr.accept(self)
 
     @staticmethod

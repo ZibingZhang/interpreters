@@ -1,15 +1,15 @@
 from __future__ import annotations
 import sys
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 import interpreter as interpret
 import parser as parse
 import scanner as scan
 from tokens import TokenType
-from expr import ASTPrinter
 
 if TYPE_CHECKING:
     from exceptions import RuntimeException
     from tokens import Token
+    from typing import List
 
 
 class Lox:
@@ -17,33 +17,38 @@ class Lox:
     had_error = False
     had_runtime_error = False
 
-    def main(self, argv: List[str]) -> None:
+    @staticmethod
+    def main(argv: List[str]) -> None:
         if len(argv) > 2:
             print('Usage: plox [script]')
             sys.exit(100)
         elif len(argv) == 2:
-            self.run_file(path=argv[1])
+            Lox.run_file(path=argv[1])
         else:
-            self.run_prompt()
+            Lox.run_prompt()
 
-    def run_file(self, *, path: str):
+    @staticmethod
+    def run_file(*, path: str):
         try:
             with open(path) as f:
-                self.run(f.read())
+                Lox.run(f.read())
         except FileNotFoundError:
             print(f'File not found: {path}')
             sys.exit(101)
 
-    def run_prompt(self):
+    @staticmethod
+    def run_prompt():
         print('Lox (Python Implementation)')
         while True:
             line = input('>>> ')
             if line == '':
                 break
-            self.run(line)
-            self.had_error = False
+            Lox.run(line)
+            Lox.had_error = False
+            Lox.had_runtime_error = False
 
-    def run(self, source: str):
+    @staticmethod
+    def run(source: str):
         if Lox.had_error:
             sys.exit(110)
         if Lox.had_runtime_error:
@@ -53,7 +58,7 @@ class Lox:
         parser = parse.Parser(scanner.scan())
         expr = parser.parse()
 
-        if self.had_error:
+        if Lox.had_error:
             return
 
         Lox.interpreter.interpret(expr)

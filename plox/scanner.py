@@ -1,8 +1,11 @@
-from functools import cached_property
-from typing import List
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from tokens import Token, TokenType
 import lox
-from type import Literal
+
+if TYPE_CHECKING:
+    from type import Literal
+    from typing import List
 
 
 class Scanner:
@@ -53,7 +56,7 @@ class Scanner:
         elif c == '{':
             self._add_token(TokenType.LEFT_BRACE)
         elif c == '}':
-            self._add_token(TokenType.RIGHT_PAREN)
+            self._add_token(TokenType.RIGHT_BRACE)
         elif c == ':':
             self._add_token(TokenType.COLON)
         elif c == ',':
@@ -81,7 +84,7 @@ class Scanner:
         elif c == '/':
             if self._match('/'):
                 self._line_comment()
-            if self._match('*'):
+            elif self._match('*'):
                 raise NotImplementedError('Block comments not yet supported.')
                 # self._block_comment()
             else:
@@ -102,7 +105,7 @@ class Scanner:
     def _line_comment(self) -> None:
         while self._peek() != '\n' and not self._is_at_end:
             self._advance()
-        self._add_token(TokenType.COMMENT)
+        # self._add_token(TokenType.COMMENT)
 
     def _identifier(self) -> None:
         while self._peek().isalpha():
