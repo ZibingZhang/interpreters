@@ -21,7 +21,11 @@ class StmtVisitor(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def visit_expr_stmt(self, stmt: Expr) -> Any:
+    def visit_expression_stmt(self, stmt: Expression) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_if_stmt(self, stmt: If) -> Any:
         ...
 
     @abc.abstractmethod
@@ -30,6 +34,10 @@ class StmtVisitor(abc.ABC):
 
     @abc.abstractmethod
     def visit_var_stmt(self, stmt: Var) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_while_stmt(self, stmt: While) -> Any:
         ...
 
 
@@ -42,16 +50,26 @@ class Block(Stmt):
 
 
 @dataclass(frozen=True)
-class Expr(Stmt):
-    expr: ex.Expr
+class Expression(Stmt):
+    expression: ex.Expr
 
     def accept(self, visitor: StmtVisitor) -> Any:
-        return visitor.visit_expr_stmt(self)
+        return visitor.visit_expression_stmt(self)
+
+
+@dataclass(frozen=True)
+class If(Stmt):
+    condition: ex.Expr
+    then_branch: Stmt
+    else_branch: Optional[Stmt]
+
+    def accept(self, visitor: StmtVisitor) -> Any:
+        return visitor.visit_if_stmt(self)
 
 
 @dataclass(frozen=True)
 class Print(Stmt):
-    expr: ex.Expr
+    expression: ex.Expr
 
     def accept(self, visitor: StmtVisitor) -> Any:
         return visitor.visit_print_stmt(self)
@@ -64,3 +82,12 @@ class Var(Stmt):
 
     def accept(self, visitor: StmtVisitor) -> Any:
         return visitor.visit_var_stmt(self)
+
+
+@dataclass(frozen=True)
+class While(Stmt):
+    condition: ex.Expr
+    body: Stmt
+
+    def accept(self, visitor: StmtVisitor) -> Any:
+        return visitor.visit_while_stmt(self)

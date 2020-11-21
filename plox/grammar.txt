@@ -1,6 +1,6 @@
 Grammar (Extended Backus–Naur Form)
 ===================================
-program        = statement* EOF ;
+program        = declaration* EOF ;
 
 declaration    = var-decl
                | statement ;
@@ -8,18 +8,29 @@ declaration    = var-decl
 var-decl       = "var" IDENTIFIER ( "=" expression )? ";" ;
 
 statement      = expr-stmt
+               | for-stmt
+               | if-stmt
                | print-stmt
+               | while-stmt
                | block ;
 
 expr-stmt      = expression ";" ;
+for-stmt       = "for" "(" (var-decl | expr-stmt | ";")
+                 expression? ;
+                 expression? ")" statement ;
+if-stmt        = "if" "(" expression ")"
+                 statement ( "else" statement )? ;
 print-stmt     = "print" expression ";" ;
+while-stmt     = "while" "(" expression ")" statement ;
 block          = "{" declaration* "}" ;
 
-expression     = assignment ;
+expression     = sequence ;
+sequence       = assignment ( "," assignment )* ;
 assignment     = IDENTIFIER "=" assignment
-               | sequence ;
-sequence       = ternary ( "," ternary )* ;
-ternary        = equality ( "?" equality ":" equality )* ;
+               | ternary ;
+ternary        = logical-or "?" ternary ":" ternary ;
+logical-or     = logical-and ( "or" logical-and )* ;
+logical-and    = equality ( "or" equality )* ;
 equality       = comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     = term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           = factor ( ( "-" | "+" ) factor )* ;

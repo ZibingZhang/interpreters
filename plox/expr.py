@@ -33,6 +33,10 @@ class ExprVisitor(abc.ABC):
         ...
 
     @abc.abstractmethod
+    def visit_logical_expr(self, expr: Logical) -> Any:
+        ...
+
+    @abc.abstractmethod
     def visit_ternary_expr(self, expr: Ternary) -> Any:
         ...
 
@@ -57,7 +61,7 @@ class Assign(Expr):
 @dataclass(frozen=True)
 class Binary(Expr):
     left: Expr
-    op: Token
+    operator: Token
     right: Expr
 
     def accept(self, visitor: ExprVisitor) -> Any:
@@ -66,7 +70,7 @@ class Binary(Expr):
 
 @dataclass(frozen=True)
 class Grouping(Expr):
-    expr: Expr
+    expression: Expr
 
     def accept(self, visitor: ExprVisitor) -> Any:
         return visitor.visit_grouping_expr(self)
@@ -81,11 +85,21 @@ class Literal(Expr):
 
 
 @dataclass(frozen=True)
+class Logical(Expr):
+    left: Expr
+    operator: Token
+    right: Expr
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_logical_expr(self)
+
+
+@dataclass(frozen=True)
 class Ternary(Expr):
     left: Expr
-    op1: Token
+    operator1: Token
     center: Expr
-    op2: Token
+    operator2: Token
     right: Expr
 
     def accept(self, visitor: ExprVisitor) -> Any:
@@ -111,10 +125,10 @@ class Variable(Expr):
 
 class ASTPrinter(ExprVisitor):
     def visit_binary_expr(self, expr: Binary):
-        return self._parenthesize(expr.op.lexeme, expr.left, expr.right)
+        return self._parenthesize(expr.operator.lexeme, expr.left, expr.right)
 
     def visit_grouping_expr(self, expr: Grouping):
-        return self._parenthesize('group', expr.expr)
+        return self._parenthesize('group', expr.expression)
 
     def visit_literal_expr(self, expr: Literal):
         if expr.value is None:
@@ -122,7 +136,7 @@ class ASTPrinter(ExprVisitor):
         return str(expr.value)
 
     def visit_ternary_expr(self, expr: Ternary) -> Any:
-        return self._parenthesize(expr.op1.lexeme + expr.op2.lexeme, expr.left, expr.center, expr.right)
+        return self._parenthesize(expr.operator1.lexeme + expr.operator2.lexeme, expr.left, expr.center, expr.right)
 
     def visit_unary_expr(self, expr: Unary):
         return self._parenthesize(expr.op.lexeme, expr.right)

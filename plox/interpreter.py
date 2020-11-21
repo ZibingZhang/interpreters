@@ -35,39 +35,39 @@ class Interpreter(ExprVisitor, StmtVisitor):
         left = self._evaluate(expr.left)
         right = self._evaluate(expr.right)
 
-        if expr.op.type is TokenType.BANG_EQUAL:
+        if expr.operator.type is TokenType.BANG_EQUAL:
             return not self._is_equal(left, right)
-        if expr.op.type is TokenType.EQUAL_EQUAL:
+        if expr.operator.type is TokenType.EQUAL_EQUAL:
             return self._is_equal(left, right)
-        if expr.op.type is TokenType.GREATER:
-            self._check_number_operands(expr.op, left, right)
+        if expr.operator.type is TokenType.GREATER:
+            self._check_number_operands(expr.operator, left, right)
             return left > right
-        if expr.op.type is TokenType.GREATER_EQUAL:
-            self._check_number_operands(expr.op, left, right)
+        if expr.operator.type is TokenType.GREATER_EQUAL:
+            self._check_number_operands(expr.operator, left, right)
             return left >= right
-        if expr.op.type is TokenType.LESS:
-            self._check_number_operands(expr.op, left, right)
+        if expr.operator.type is TokenType.LESS:
+            self._check_number_operands(expr.operator, left, right)
             return left < right
-        if expr.op.type is TokenType.LESS_EQUAL:
-            self._check_number_operands(expr.op, left, right)
+        if expr.operator.type is TokenType.LESS_EQUAL:
+            self._check_number_operands(expr.operator, left, right)
             return left <= right
-        if expr.op.type is TokenType.MINUS:
-            self._check_number_operands(expr.op, left, right)
+        if expr.operator.type is TokenType.MINUS:
+            self._check_number_operands(expr.operator, left, right)
             return left - right
-        if expr.op.type is TokenType.SLASH:
-            self._check_number_operands(expr.op, left, right)
-            self._check_denominator(expr.op, right)
+        if expr.operator.type is TokenType.SLASH:
+            self._check_number_operands(expr.operator, left, right)
+            self._check_denominator(expr.operator, right)
             return left / right
-        if expr.op.type is TokenType.STAR:
-            self._check_number_operands(expr.op, left, right)
+        if expr.operator.type is TokenType.STAR:
+            self._check_number_operands(expr.operator, left, right)
             return left * right
-        if expr.op.type is TokenType.PLUS:
+        if expr.operator.type is TokenType.PLUS:
             if isinstance(left, float) and isinstance(right, float):
                 return left + right
             if isinstance(left, str) or isinstance(right, str):
                 return self._stringify(left) + self._stringify(right)
-            raise RuntimeException(expr.op, 'Incompatible operands.')
-        if expr.op.type is TokenType.COMMA:
+            raise RuntimeException(expr.operator, 'Incompatible operands.')
+        if expr.operator.type is TokenType.COMMA:
             self._evaluate(expr.left)
             return self._evaluate(expr.right)
 
@@ -75,13 +75,23 @@ class Interpreter(ExprVisitor, StmtVisitor):
         raise RuntimeError('Unreachable code.')
 
     def visit_grouping_expr(self, expr: ex.Grouping) -> LoxVal:
-        return self._evaluate(expr.expr)
+        return self._evaluate(expr.expression)
 
     def visit_literal_expr(self, expr: ex.Literal) -> LoxVal:
         return expr.value
 
+    def visit_logical_expr(self, expr: ex.Logical) -> Any:
+        left = self._evaluate(expr.left)
+
+        if expr.operator.type is TokenType.OR and self._is_truthy(left):
+            return left
+        if expr.operator.type is TokenType.AND and not self._is_truthy(left):
+            return left
+
+        return self._evaluate(expr.right)
+
     def visit_ternary_expr(self, expr: ex.Ternary) -> LoxVal:
-        if expr.op1.type is TokenType.QUESTION and expr.op2.type is TokenType.COLON:
+        if expr.operator1.type is TokenType.QUESTION and expr.operator2.type is TokenType.COLON:
             pred = self._evaluate(expr.left)
             if self._is_truthy(pred):
                 return self._evaluate(expr.center)
@@ -108,11 +118,17 @@ class Interpreter(ExprVisitor, StmtVisitor):
     def visit_block_stmt(self, stmt: st.Block) -> None:
         self._execute_block(stmt.stmts, Environment(self._env))
 
-    def visit_expr_stmt(self, stmt: st.Expr) -> None:
-        self._evaluate(stmt.expr)
+    def visit_expression_stmt(self, stmt: st.Expression) -> None:
+        self._evaluate(stmt.expression)
+
+    def visit_if_stmt(self, stmt: st.If) -> None:
+        if self._is_truthy(self._evaluate(stmt.condition)):
+            self._execute(stmt.then_branch)
+        elif stmt.else_branch:
+            self._execute(stmt.else_branch)
 
     def visit_print_stmt(self, stmt: st.Print) -> None:
-        value = self._evaluate(stmt.expr)
+        value = self._evaluate(stmt.expression)
         print(self._stringify(value))
 
     def visit_var_stmt(self, stmt: st.Var) -> None:
@@ -120,6 +136,10 @@ class Interpreter(ExprVisitor, StmtVisitor):
         if stmt.initializer is not None:
             value = self._evaluate(stmt.initializer)
         self._env.initialize(stmt.name, value)
+
+    def visit_while_stmt(self, stmt: st.While) -> None:
+        while self._is_truthy(self._evaluate(stmt.condition)):
+            self._execute(stmt.body)
 
     def _execute_block(self, stmts: List[st.Stmt], env: Environment) -> None:
         prev = self._env
