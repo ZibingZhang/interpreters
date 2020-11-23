@@ -40,6 +40,8 @@ class TokenType(enum.Enum):
 
     # keywords
     AND      = 'AND'
+    BREAK    = 'BREAK'
+    CONTINUE = 'CONTINUE'
     CLASS    = 'CLASS'
     ELSE     = 'ELSE'
     FALSE    = 'FALSE'
@@ -48,7 +50,6 @@ class TokenType(enum.Enum):
     IF       = 'IF'
     NIL      = 'NIL'
     OR       = 'OR'
-    PRINT    = 'PRINT'
     RETURN   = 'RETURN'
     SUPER    = 'SUPER'
     THIS     = 'THIS'

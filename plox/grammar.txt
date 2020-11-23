@@ -2,29 +2,39 @@ Grammar (Extended Backus–Naur Form)
 ===================================
 program        = declaration* EOF ;
 
-declaration    = var-decl
+declaration    = fun-decl
+               | var-decl
                | statement ;
+
+fun-decl       = "fun" function ;
+function       = IDENTIFIER "(" parameters? ")" block ;
 
 var-decl       = "var" IDENTIFIER ( "=" expression )? ";" ;
 
-statement      = expr-stmt
+statement      = break-stmt
+               | continue-stmt
+               | expr-stmt
                | for-stmt
+               | fun-stmt
                | if-stmt
-               | print-stmt
+               | return-stmt
                | while-stmt
                | block ;
 
+break-stmt    = "break" expression ";" ;
+continue-stmt    = "continue" expression ";" ;
 expr-stmt      = expression ";" ;
 for-stmt       = "for" "(" (var-decl | expr-stmt | ";")
                  expression? ;
                  expression? ")" statement ;
 if-stmt        = "if" "(" expression ")"
                  statement ( "else" statement )? ;
-print-stmt     = "print" expression ";" ;
+return-stmt    = "return" expression ";" ;
 while-stmt     = "while" "(" expression ")" statement ;
 block          = "{" declaration* "}" ;
 
-expression     = sequence ;
+expression     = "fun" "(" parameters? ")" block
+               | sequence ;
 sequence       = assignment ( "," assignment )* ;
 assignment     = IDENTIFIER "=" assignment
                | ternary ;
@@ -36,11 +46,17 @@ comparison     = term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           = factor ( ( "-" | "+" ) factor )* ;
 factor         = unary ( ( "/" | "*" ) unary )* ;
 unary          = ( "!" | "-" ) unary
-               | primary ;
+               | call ;
+call           = primary ( "(" arguments? ")" )* ;
 primary        = "true" | "false" | "nil"
                | NUMBER | STRING
                | "(" expression ")" ";"
-               | IDENTIFIED ;
+               | IDENTIFIER ;
+
+parameters     = IDENTIFIER ( "," IDENTIFIER )* ;
+arguments      = expression ( "," expression )* ;
+
+
 
 Additional Rules for Error Checking
 ===================================

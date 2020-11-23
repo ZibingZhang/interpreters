@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing import Any, List
+    from stmt import Block
     from tokens import Token
     from type import Literal
-    from typing import Any
 
 
 class Expr(abc.ABC):
@@ -22,6 +23,14 @@ class ExprVisitor(abc.ABC):
 
     @abc.abstractmethod
     def visit_binary_expr(self, expr: Binary) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_call_expr(self, expr: Call) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_function_expr(self, expr: Function) -> Any:
         ...
 
     @abc.abstractmethod
@@ -66,6 +75,25 @@ class Binary(Expr):
 
     def accept(self, visitor: ExprVisitor) -> Any:
         return visitor.visit_binary_expr(self)
+
+
+@dataclass(frozen=True)
+class Call(Expr):
+    callee: Expr
+    paren: Token
+    arguments: List[Expr]
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_call_expr(self)
+
+
+@dataclass(frozen=True)
+class Function(Expr):
+    parameters: List[Token]
+    body: Block
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_function_expr(self)
 
 
 @dataclass(frozen=True)

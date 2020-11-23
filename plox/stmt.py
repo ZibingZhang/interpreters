@@ -21,6 +21,14 @@ class StmtVisitor(abc.ABC):
         ...
 
     @abc.abstractmethod
+    def visit_break_stmt(self, stmt: Break) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_continue_stmt(self, stmt: Continue) -> Any:
+        ...
+
+    @abc.abstractmethod
     def visit_expression_stmt(self, stmt: Expression) -> Any:
         ...
 
@@ -29,7 +37,7 @@ class StmtVisitor(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def visit_print_stmt(self, stmt: Print) -> Any:
+    def visit_return_stmt(self, stmt: Return) -> Any:
         ...
 
     @abc.abstractmethod
@@ -47,6 +55,22 @@ class Block(Stmt):
 
     def accept(self, visitor: StmtVisitor) -> Any:
         return visitor.visit_block_stmt(self)
+
+
+@dataclass(frozen=True)
+class Break(Stmt):
+    keyword: Token
+
+    def accept(self, visitor: StmtVisitor) -> Any:
+        return visitor.visit_break_stmt(self)
+
+
+@dataclass(frozen=True)
+class Continue(Stmt):
+    keyword: Token
+
+    def accept(self, visitor: StmtVisitor) -> Any:
+        return visitor.visit_continue_stmt(self)
 
 
 @dataclass(frozen=True)
@@ -68,11 +92,12 @@ class If(Stmt):
 
 
 @dataclass(frozen=True)
-class Print(Stmt):
+class Return(Stmt):
+    keyword: Token
     expression: ex.Expr
 
     def accept(self, visitor: StmtVisitor) -> Any:
-        return visitor.visit_print_stmt(self)
+        return visitor.visit_return_stmt(self)
 
 
 @dataclass(frozen=True)
