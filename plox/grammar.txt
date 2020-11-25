@@ -33,8 +33,7 @@ return-stmt    = "return" expression ";" ;
 while-stmt     = "while" "(" expression ")" statement ;
 block          = "{" declaration* "}" ;
 
-expression     = "fun" "(" parameters? ")" block
-               | sequence ;
+expression     = sequence ;
 sequence       = assignment ( "," assignment )* ;
 assignment     = IDENTIFIER "=" assignment
                | ternary ;

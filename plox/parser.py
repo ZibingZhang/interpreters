@@ -1,5 +1,4 @@
 from __future__ import annotations
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 import expr as ex
 import lox
@@ -34,19 +33,11 @@ class Parser:
 
     def _declaration(self) -> Optional[st.Stmt]:
         try:
-            if self._match(TokenType.FUN):
-                # doesn't exactly follow guide, check back when doing classes
-                return self._function_declaration('function')
             if self._match(TokenType.VAR):
                 return self._variable_declaration()
             return self._statement()
         except _ParseError:
             self._synchronize()
-
-    def _function_declaration(self, kind: str) -> st.Var:
-        name = self._consume(TokenType.IDENTIFIER, f'Expect {kind} name.')
-        function = self._finish_function_expr(f'{kind} name.')
-        return st.Var(name, function)
 
     def _variable_declaration(self) -> st.Var:
         name = self._consume(TokenType.IDENTIFIER, 'Expect variable name.')
@@ -61,6 +52,8 @@ class Parser:
             return self._continue_statement()
         if self._match(TokenType.FOR):
             return self._for_statement()
+        if self._match(TokenType.FUN):
+            return self._function('function')
         if self._match(TokenType.IF):
             return self._if_statement()
         if self._match(TokenType.RETURN):
@@ -68,7 +61,8 @@ class Parser:
         if self._match(TokenType.WHILE):
             return self._while_statement()
         if self._match(TokenType.LEFT_BRACE):
-            return self._block()
+            statements = self._block()
+            return st.Block(statements)
         return self._expression_statement()
 
     def _break_statement(self) -> st.Break:
@@ -133,18 +127,30 @@ class Parser:
         body = self._statement()
         return st.While(condition, body)
 
-    def _block(self) -> st.Block:
+    def _block(self) -> List[st.Stmt]:
         statements = []
 
         while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end:
             statements.append(self._declaration())
 
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after block.")
-        return st.Block(statements)
+        return statements
+
+    def _function(self, kind: str) -> st.Function:
+        name = self._consume(TokenType.IDENTIFIER, f'Expect {kind} name.')
+        self._consume(TokenType.LEFT_PAREN, f"Expect '(' after {kind} name.")
+        parameters = []
+        if not self._check(TokenType.RIGHT_PAREN):
+            parameters.append(self._consume(TokenType.IDENTIFIER, 'Expect parameter name.'))
+            while self._match(TokenType.COMMA):
+                if len(parameters) >= 255:
+                    self._error(self._peek(), "Can't have more that 255 parameters.")
+        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.")
+        self._consume(TokenType.LEFT_BRACE, f"Expect '{{' before {kind} body.")
+        body = self._block()
+        return st.Function(name, parameters, body)
 
     def _expression(self) -> ex.Expr:
-        if self._match(TokenType.FUN):
-            return self._finish_function_expr("'fun'")
         return self._sequence()
 
     def _sequence(self) -> ex.Expr:
@@ -333,20 +339,6 @@ class Parser:
                 arguments.append(self._expression())
         paren = self._consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.")
         return ex.Call(expr, paren, arguments)
-    
-    def _finish_function_expr(self, previous: str) -> ex.Function:
-        parameters = []
-        self._consume(TokenType.LEFT_PAREN, f"Expect '(' after {previous}.")
-        if not self._check(TokenType.RIGHT_PAREN):
-            parameters.append(self._consume(TokenType.IDENTIFIER, "Expect parameter name."))
-            while self._check(TokenType.COMMA):
-                if len(parameters) >= 255:
-                    self._error(self._peek(), "Can't have more than 255 parameters.")
-                parameters.append(self._consume(TokenType.IDENTIFIER, "Expect parameter name."))
-        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.")
-        self._consume(TokenType.LEFT_BRACE, "Expect '{' before function body.")
-        block = self._block()
-        return ex.Function(parameters, block.statements)
 
     @staticmethod
     def _error(token: Token, msg: str):

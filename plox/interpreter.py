@@ -91,9 +91,6 @@ class Interpreter(ExprVisitor, StmtVisitor):
             raise RuntimeException(expr.paren, f'Expected {function.arity} arguments, but got {len(arguments)}.')
         return callee.call(self, arguments)
 
-    def visit_function_expr(self, expr: ex.Function) -> LoxFunction:
-        return LoxFunction(expr, self._environment)
-
     def visit_grouping_expr(self, expr: ex.Grouping) -> LoxValue:
         return self._evaluate(expr.expression)
 
@@ -147,6 +144,10 @@ class Interpreter(ExprVisitor, StmtVisitor):
     def visit_expression_stmt(self, stmt: st.Expression) -> None:
         self._evaluate(stmt.expression)
 
+    def visit_function_stmt(self, stmt: st.Function) -> None:
+        function = LoxFunction(stmt.name, stmt, self._environment)
+        self._environment.define(stmt.name.lexeme, function)
+
     def visit_if_stmt(self, stmt: st.If) -> None:
         if self._is_truthy(self._evaluate(stmt.condition)):
             self._execute(stmt.then_branch)
@@ -160,8 +161,6 @@ class Interpreter(ExprVisitor, StmtVisitor):
         value = None
         if stmt.initializer is not None:
             value = self._evaluate(stmt.initializer)
-            if isinstance(value, LoxFunction):
-                value = LoxFunction(value.expression, value.closure, stmt.name.lexeme)
         self._environment.initialize(stmt.name, value)
 
     def visit_while_stmt(self, stmt: st.While) -> None:

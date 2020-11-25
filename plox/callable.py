@@ -25,16 +25,16 @@ class Callable(abc.ABC):
 
 @dataclass(frozen=True)
 class LoxFunction(Callable):
+    name: Token
     expression: Function
     closure: Environment
-    name: Optional[str] = None
 
     @property
     def arity(self) -> int:
         return len(self.expression.parameters)
 
     def __str__(self):
-        return f'<fn {self.name}>' if self.name else '<fn>'
+        return f'<fn {self.name.lexeme}>'
 
     def call(self, interpreter: Interpreter, arguments: List[LoxValue]) -> LoxValue:
         env = Environment(self.closure)

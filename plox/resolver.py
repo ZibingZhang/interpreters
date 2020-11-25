@@ -7,7 +7,7 @@ import lox
 import stmt as st
 from expr import ExprVisitor
 from interpreter import Interpreter
-from stmt import StmtVisitor
+from stmt import StmtVisitor, Function
 
 if TYPE_CHECKING:
     from typing import List, Union
@@ -33,22 +33,6 @@ class Resolver(ExprVisitor, StmtVisitor):
         self.resolve(expr.callee)
         for arg in expr.arguments:
             self.resolve(arg)
-
-    def visit_function_expr(self, expr: ex.Function) -> None:
-        enclosing_function = self._current_function
-        enclosing_loop_depth = self._loop_depth
-        self._current_function = _FunctionType.FUNCTION
-        self._loop_depth = 0
-        self._begin_scope()
-        for param in expr.parameters:
-            self._declare(param)
-            self._define(param)
-        self._begin_scope()
-        self.resolve(expr.body)
-        self._end_scope()
-        self._end_scope()
-        self._current_function = enclosing_function
-        self._loop_depth = enclosing_loop_depth
 
     def visit_grouping_expr(self, expr: ex.Grouping) -> None:
         self.resolve(expr.expression)
@@ -89,6 +73,11 @@ class Resolver(ExprVisitor, StmtVisitor):
     def visit_expression_stmt(self, stmt: st.Expression) -> None:
         self.resolve(stmt.expression)
 
+    def visit_function_stmt(self, stmt: Function) -> None:
+        self._declare(stmt.name)
+        self._define(stmt.name)
+        self._resolve_function(stmt, _FunctionType.FUNCTION)
+
     def visit_if_stmt(self, stmt: st.If) -> None:
         self.resolve(stmt.condition)
         self.resolve(stmt.then_branch)
@@ -104,12 +93,8 @@ class Resolver(ExprVisitor, StmtVisitor):
     def visit_var_stmt(self, stmt: st.Var) -> None:
         self._declare(stmt.name)
         if stmt.initializer is not None:
-            if isinstance(stmt.initializer, ex.Function):
-                self._define(stmt.name)
-                self.resolve(stmt.initializer)
-            else:
-                self.resolve(stmt.initializer)
-                self._define(stmt.name)
+            self.resolve(stmt.initializer)
+            self._define(stmt.name)
 
     def visit_while_stmt(self, stmt: st.While) -> None:
         self._loop_depth += 1
@@ -136,7 +121,23 @@ class Resolver(ExprVisitor, StmtVisitor):
     def _end_scope(self) -> None:
         self._scopes.pop()
 
-    def _resolve_local(self, expr: ex.Expr, name: Token):
+    def _resolve_function(self, func: st.Function, func_type: _FunctionType) -> None:
+        enclosing_function = self._current_function
+        enclosing_loop_depth = self._loop_depth
+        self._current_function = func_type
+        self._loop_depth = 0
+        self._begin_scope()
+        for param in func.parameters:
+            self._declare(param)
+            self._define(param)
+        self._begin_scope()
+        self.resolve(func.body)
+        self._end_scope()
+        self._end_scope()
+        self._current_function = enclosing_function
+        self._loop_depth = enclosing_loop_depth
+
+    def _resolve_local(self, expr: ex.Expr, name: Token) -> None:
         for idx, scope in enumerate(reversed(self._scopes)):
             if name.lexeme in scope:
                 self._interpreter.resolve(expr, idx)

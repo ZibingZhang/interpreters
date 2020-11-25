@@ -30,10 +30,6 @@ class ExprVisitor(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def visit_function_expr(self, expr: Function) -> Any:
-        ...
-
-    @abc.abstractmethod
     def visit_grouping_expr(self, expr: Grouping) -> Any:
         ...
 
@@ -85,15 +81,6 @@ class Call(Expr):
 
     def accept(self, visitor: ExprVisitor) -> Any:
         return visitor.visit_call_expr(self)
-
-
-@dataclass(frozen=True)
-class Function(Expr):
-    parameters: List[Token]
-    body: List[Stmt]
-
-    def accept(self, visitor: ExprVisitor) -> Any:
-        return visitor.visit_function_expr(self)
 
 
 @dataclass(frozen=True)

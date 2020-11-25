@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, List, Optional
+    from typing import Any, Dict, List, Optional
     import expr as ex
     from tokens import Token
 
@@ -30,6 +30,10 @@ class StmtVisitor(abc.ABC):
 
     @abc.abstractmethod
     def visit_expression_stmt(self, stmt: Expression) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_function_stmt(self, stmt: Function) -> Any:
         ...
 
     @abc.abstractmethod
@@ -79,6 +83,16 @@ class Expression(Stmt):
 
     def accept(self, visitor: StmtVisitor) -> Any:
         return visitor.visit_expression_stmt(self)
+
+
+@dataclass(frozen=True)
+class Function(Stmt):
+    name: Token
+    parameters: List[Token]
+    body: List[Stmt]
+
+    def accept(self, visitor: StmtVisitor) -> Any:
+        return visitor.visit_function_stmt(self)
 
 
 @dataclass(frozen=True)
