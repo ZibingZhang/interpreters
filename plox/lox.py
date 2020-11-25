@@ -3,6 +3,7 @@ import sys
 from typing import TYPE_CHECKING
 import interpreter as interpret
 import parser as parse
+import resolver as resolve
 import scanner as scan
 from tokens import TokenType
 
@@ -36,6 +37,11 @@ class Lox:
             print(f'File not found: {path}')
             sys.exit(101)
 
+        if Lox.had_error:
+            sys.exit(110)
+        if Lox.had_runtime_error:
+            sys.exit(111)
+
     @staticmethod
     def run_prompt():
         print('Lox (Python Implementation)')
@@ -49,19 +55,22 @@ class Lox:
 
     @staticmethod
     def run(source: str):
-        if Lox.had_error:
-            sys.exit(110)
-        if Lox.had_runtime_error:
-            sys.exit(111)
-
         scanner = scan.Scanner(source)
         parser = parse.Parser(scanner.scan())
-        expr = parser.parse()
+        statements = parser.parse()
 
         if Lox.had_error:
             return
 
-        Lox.interpreter.interpret(expr)
+        resolver = resolve.Resolver(Lox.interpreter)
+        resolver.resolve(statements)
+
+        # print(Lox.interpreter._locals)
+
+        if Lox.had_error:
+            return
+
+        Lox.interpreter.interpret(statements)
 
     @staticmethod
     def error_line(line: int, msg: str) -> None:

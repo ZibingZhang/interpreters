@@ -6,7 +6,7 @@ from environment import Environment
 from exceptions import Return
 
 if TYPE_CHECKING:
-    from typing import List
+    from typing import List, Optional
     from expr import Function
     from interpreter import Interpreter
     from type import LoxValue
@@ -27,19 +27,20 @@ class Callable(abc.ABC):
 class LoxFunction(Callable):
     expression: Function
     closure: Environment
+    name: Optional[str] = None
 
     @property
     def arity(self) -> int:
         return len(self.expression.parameters)
 
     def __str__(self):
-        return '<fn>'
+        return f'<fn {self.name}>' if self.name else '<fn>'
 
     def call(self, interpreter: Interpreter, arguments: List[LoxValue]) -> LoxValue:
         env = Environment(self.closure)
         for idx, (param, arg) in enumerate(zip(self.expression.parameters, arguments)):
             env.define(param.lexeme, arg)
         try:
-            interpreter.execute_block(self.expression.body.stmts, Environment(env))
+            interpreter.execute_block(self.expression.body, Environment(env))
         except Return as e:
             return e.value

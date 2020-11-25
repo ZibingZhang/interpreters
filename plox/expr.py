@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Any, List
-    from stmt import Block
+    from stmt import Stmt
     from tokens import Token
     from type import Literal
 
@@ -90,7 +90,7 @@ class Call(Expr):
 @dataclass(frozen=True)
 class Function(Expr):
     parameters: List[Token]
-    body: Block
+    body: List[Stmt]
 
     def accept(self, visitor: ExprVisitor) -> Any:
         return visitor.visit_function_expr(self)

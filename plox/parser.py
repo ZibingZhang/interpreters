@@ -27,25 +27,25 @@ class Parser:
     def parse(self) -> List[st.Stmt]:
         statements = []
         while not self._is_at_end:
-            statement = self._declaration(_State())
+            statement = self._declaration()
             if statement is not None:
                 statements.append(statement)
         return statements
 
-    def _declaration(self, state: _State) -> Optional[st.Stmt]:
+    def _declaration(self) -> Optional[st.Stmt]:
         try:
             if self._match(TokenType.FUN):
                 # doesn't exactly follow guide, check back when doing classes
-                return self._function_declaration(state, 'function')
+                return self._function_declaration('function')
             if self._match(TokenType.VAR):
                 return self._variable_declaration()
-            return self._statement(state)
+            return self._statement()
         except _ParseError:
             self._synchronize()
 
-    def _function_declaration(self, state: _State, kind: str) -> st.Var:
+    def _function_declaration(self, kind: str) -> st.Var:
         name = self._consume(TokenType.IDENTIFIER, f'Expect {kind} name.')
-        function = self._finish_function_expr(_State.enter_function_body(state), f'{kind} name.')
+        function = self._finish_function_expr(f'{kind} name.')
         return st.Var(name, function)
 
     def _variable_declaration(self) -> st.Var:
@@ -54,33 +54,29 @@ class Parser:
         self._consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.")
         return st.Var(name, initializer)
 
-    def _statement(self, state: _State) -> st.Stmt:
+    def _statement(self) -> st.Stmt:
         if self._match(TokenType.BREAK):
-            return self._break_statement(state)
+            return self._break_statement()
         if self._match(TokenType.CONTINUE):
-            return self._continue_statement(state)
+            return self._continue_statement()
         if self._match(TokenType.FOR):
-            return self._for_statement(state)
+            return self._for_statement()
         if self._match(TokenType.IF):
-            return self._if_statement(state)
+            return self._if_statement()
         if self._match(TokenType.RETURN):
-            return self._return_statement(state)
+            return self._return_statement()
         if self._match(TokenType.WHILE):
-            return self._while_statement(state)
+            return self._while_statement()
         if self._match(TokenType.LEFT_BRACE):
-            return self._block(state)
+            return self._block()
         return self._expression_statement()
 
-    def _break_statement(self, state: _State) -> st.Break:
-        if not state.in_loop:
-            raise self._error(self._previous, "Unexpected 'break' keyword.")
+    def _break_statement(self) -> st.Break:
         keyword = self._previous
         self._consume(TokenType.SEMICOLON, "Expect ';' after continue value.")
         return st.Break(keyword)
 
-    def _continue_statement(self, state: _State) -> st.Continue:
-        if not state.in_loop:
-            raise self._error(self._previous, "Unexpected 'continue' keyword.")
+    def _continue_statement(self) -> st.Continue:
         keyword = self._previous
         self._consume(TokenType.SEMICOLON, "Expect ';' after continue value.")
         return st.Continue(keyword)
@@ -90,7 +86,7 @@ class Parser:
         self._consume(TokenType.SEMICOLON, "Expect a ';' after expression.")
         return st.Expression(value)
 
-    def _for_statement(self, state: _State) -> st.While:
+    def _for_statement(self) -> st.While:
         self._consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.")
 
         initializer = None
@@ -107,7 +103,7 @@ class Parser:
         increment = None if self._check(TokenType.RIGHT_PAREN) else self._expression()
         self._consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses.")
 
-        body = self._statement(_State.enter_loop(state))
+        body = self._statement()
         if increment is not None:
             body = st.Block([body, st.Expression(increment)])
         body = st.While(condition, body)
@@ -116,41 +112,39 @@ class Parser:
 
         return body
 
-    def _if_statement(self, state: _State) -> st.If:
+    def _if_statement(self) -> st.If:
         self._consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.")
         condition = self._expression()
         self._consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition.")
-        then_branch = self._statement(state)
-        else_branch = self._statement(state) if self._match(TokenType.ELSE) else None
+        then_branch = self._statement()
+        else_branch = self._statement() if self._match(TokenType.ELSE) else None
         return st.If(condition, then_branch, else_branch)
 
-    def _return_statement(self, state: _State) -> st.Return:
-        if not state.in_function:
-            raise self._error(self._previous, "Unexpected 'return' keyword.")
+    def _return_statement(self) -> st.Return:
         keyword = self._previous
         value = None if self._check(TokenType.SEMICOLON) else self._expression()
         self._consume(TokenType.SEMICOLON, "Expect ';' after return value.")
         return st.Return(keyword, value)
 
-    def _while_statement(self, state: _State) -> st.While:
+    def _while_statement(self) -> st.While:
         self._consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.")
         condition = self._expression()
         self._consume(TokenType.RIGHT_PAREN, "Expect ')' after condition.")
-        body = self._statement(_State.enter_loop(state))
+        body = self._statement()
         return st.While(condition, body)
 
-    def _block(self, state: _State) -> st.Block:
+    def _block(self) -> st.Block:
         statements = []
 
         while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end:
-            statements.append(self._declaration(state))
+            statements.append(self._declaration())
 
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after block.")
         return st.Block(statements)
 
     def _expression(self) -> ex.Expr:
         if self._match(TokenType.FUN):
-            return self._finish_function_expr(_State.enter_function_body(_State()), "'fun'")
+            return self._finish_function_expr("'fun'")
         return self._sequence()
 
     def _sequence(self) -> ex.Expr:
@@ -340,7 +334,7 @@ class Parser:
         paren = self._consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.")
         return ex.Call(expr, paren, arguments)
     
-    def _finish_function_expr(self, state: _State, previous: str) -> ex.Function:
+    def _finish_function_expr(self, previous: str) -> ex.Function:
         parameters = []
         self._consume(TokenType.LEFT_PAREN, f"Expect '(' after {previous}.")
         if not self._check(TokenType.RIGHT_PAREN):
@@ -351,8 +345,8 @@ class Parser:
                 parameters.append(self._consume(TokenType.IDENTIFIER, "Expect parameter name."))
         self._consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.")
         self._consume(TokenType.LEFT_BRACE, "Expect '{' before function body.")
-        body = self._block(state)
-        return ex.Function(parameters, body)
+        block = self._block()
+        return ex.Function(parameters, block.statements)
 
     @staticmethod
     def _error(token: Token, msg: str):
@@ -362,17 +356,3 @@ class Parser:
 
 class _ParseError(RuntimeError):
     pass
-
-
-@dataclass
-class _State:
-    in_function: bool = False
-    in_loop: bool = False
-
-    @staticmethod
-    def enter_loop(state: _State) -> _State:
-        return _State(in_function=state.in_function, in_loop=True)
-
-    @staticmethod
-    def enter_function_body(state: _State) -> _State:
-        return _State(in_function=True, in_loop=state.in_loop)

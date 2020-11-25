@@ -18,8 +18,6 @@ class Environment:
         self.values[name] = value
 
     def initialize(self, name: Token, value: LoxValue) -> None:
-        if name.lexeme in self.values:
-            raise RuntimeException(name, 'Cannot reinitialize a variable.')
         self.values[name.lexeme] = value
 
     def assign(self, name: Token, value: LoxValue) -> None:
@@ -30,10 +28,22 @@ class Environment:
         else:
             raise RuntimeException(name, f"Undefined variable '{name.lexeme}'")
 
+    def assign_at(self, distance: int, name: Token, value: LoxValue):
+        self._ancestor(distance).values[name.lexeme] = value
+
     def get(self, name: Token) -> LoxValue:
         if name.lexeme in self.values:
             return self.values[name.lexeme]
         elif self.enclosing is not None:
             return self.enclosing.get(name)
         else:
-            raise RuntimeException(name, f"Undefined variable '{name.lexeme}.'")
+            raise RuntimeException(name, f"Undefined variable '{name.lexeme}'.")
+
+    def get_at(self, distance: int, name: Token) -> LoxValue:
+        return self._ancestor(distance).get(name)
+
+    def _ancestor(self, distance: int):
+        env = self
+        for _ in range(distance):
+            env = env.enclosing
+        return env

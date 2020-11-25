@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 class Interpreter(ExprVisitor, StmtVisitor):
     def __init__(self):
         self._GLOBALS = Environment()
-        self._environment = Environment(self._GLOBALS)
+        self._environment = self._GLOBALS
+        self._locals = {}
 
         self._GLOBALS.define('clock', natives.Clock())
         self._GLOBALS.define('print', natives.Print())
@@ -28,7 +29,11 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_assign_expr(self, expr: ex.Assign) -> Any:
         value = self._evaluate(expr.value)
-        self._environment.assign(expr.name, value)
+        distance = self._locals.get(expr)
+        if distance is None:
+            self._GLOBALS.assign(expr.name, value)
+        else:
+            self._environment.assign_at(distance, expr.name, value)
         return value
 
     def visit_binary_expr(self, expr: ex.Binary) -> LoxValue:
@@ -128,10 +133,10 @@ class Interpreter(ExprVisitor, StmtVisitor):
         raise RuntimeError('Unreachable code.')
 
     def visit_variable_expr(self, expr: ex.Variable) -> LoxValue:
-        return self._environment.get(expr.name)
+        return self._lookup_variable(expr.name, expr)
 
     def visit_block_stmt(self, stmt: st.Block) -> None:
-        self.execute_block(stmt.stmts, Environment(self._environment))
+        self.execute_block(stmt.statements, Environment(self._environment))
 
     def visit_break_stmt(self, stmt: st.Break) -> Any:
         raise Break()
@@ -149,12 +154,14 @@ class Interpreter(ExprVisitor, StmtVisitor):
             self._execute(stmt.else_branch)
 
     def visit_return_stmt(self, stmt: st.Return) -> None:
-        raise Return(None if stmt.expression is None else self._evaluate(stmt.expression))
+        raise Return(None if stmt.value is None else self._evaluate(stmt.value))
 
     def visit_var_stmt(self, stmt: st.Var) -> None:
         value = None
         if stmt.initializer is not None:
             value = self._evaluate(stmt.initializer)
+            if isinstance(value, LoxFunction):
+                value = LoxFunction(value.expression, value.closure, stmt.name.lexeme)
         self._environment.initialize(stmt.name, value)
 
     def visit_while_stmt(self, stmt: st.While) -> None:
@@ -182,6 +189,9 @@ class Interpreter(ExprVisitor, StmtVisitor):
         finally:
             self._environment = prev
 
+    def resolve(self, expr: ex.Expr, depth: int) -> None:
+        self._locals[expr] = depth
+
     @staticmethod
     def stringify(value: LoxValue) -> str:
         if value is None:
@@ -200,6 +210,13 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def _evaluate(self, expr: ex.Expr) -> LoxValue:
         return expr.accept(self)
+
+    def _lookup_variable(self, name: Token, expr: ex.Expr):
+        distance = self._locals.get(expr)
+        if distance is None:
+            return self._GLOBALS.get(name)
+        else:
+            return self._environment.get_at(distance, name)
 
     @staticmethod
     def _is_truthy(value: LoxValue) -> bool:

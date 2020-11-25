@@ -1,5 +1,5 @@
 from __future__ import annotations
-import enum
+from enum import Enum
 from typing import TYPE_CHECKING
 from dataclasses import dataclass
 
@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from type import Literal
 
 
-class TokenType(enum.Enum):
+class TokenType(Enum):
     # single-character tokens
     LEFT_PAREN  = '('
     RIGHT_PAREN = ')'
@@ -66,6 +66,7 @@ class TokenType(enum.Enum):
 
 @dataclass(frozen=True)
 class Token:
+    _id: int
     type: TokenType
     lexeme: str
     literal: Literal

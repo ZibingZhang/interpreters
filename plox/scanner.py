@@ -35,6 +35,7 @@ class Scanner:
         self._current = 0
         self._line = 1
         self._tokens = []
+        self._next_id = 0
 
     @property
     def _is_at_end(self) -> bool:
@@ -170,4 +171,5 @@ class Scanner:
 
     def _add_token(self, token_type: TokenType, literal: Literal = None) -> None:
         text = self._source[self._start:self._current]
-        self._tokens.append(Token(token_type, text, literal, self._line))
+        self._tokens.append(Token(self._next_id, token_type, text, literal, self._line))
+        self._next_id += 1

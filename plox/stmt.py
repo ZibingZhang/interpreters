@@ -51,7 +51,7 @@ class StmtVisitor(abc.ABC):
 
 @dataclass(frozen=True)
 class Block(Stmt):
-    stmts: List[Stmt]
+    statements: List[Stmt]
 
     def accept(self, visitor: StmtVisitor) -> Any:
         return visitor.visit_block_stmt(self)
@@ -94,7 +94,7 @@ class If(Stmt):
 @dataclass(frozen=True)
 class Return(Stmt):
     keyword: Token
-    expression: ex.Expr
+    value: ex.Expr
 
     def accept(self, visitor: StmtVisitor) -> Any:
         return visitor.visit_return_stmt(self)
