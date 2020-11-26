@@ -252,22 +252,28 @@ class Parser:
             op = self._previous
             right = self._unary()
             return ex.Unary(op, right)
-        if self._match(TokenType.PLUS):
+        if self._match(TokenType.EQUAL):
             op = self._previous
-            raise self._error(op, "Unary '+' expressions are not supported.")
+            self._assignment()
+            raise self._error(op, "Nothing to assign to.")
+        if self._match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL):
+            op = self._previous
+            self._comparison()
+            raise self._error(op, 'Not a unary operator.')
         if self._match(
-                TokenType.MINUS,
-                TokenType.SLASH,
-                TokenType.STAR,
-                TokenType.BANG,
-                TokenType.BANG_EQUAL,
-                TokenType.EQUAL,
-                TokenType.EQUAL_EQUAL,
                 TokenType.GREATER,
                 TokenType.GREATER_EQUAL,
                 TokenType.LESS,
                 TokenType.LESS_EQUAL
         ):
+            op = self._previous
+            self._term()
+            raise self._error(op, 'Not a unary operator.')
+        if self._match(TokenType.PLUS):
+            op = self._previous
+            self._factor()
+            raise self._error(op, "Unary '+' expressions are not supported.")
+        if self._match(TokenType.SLASH, TokenType.STAR):
             op = self._previous
             self._unary()
             raise self._error(op, 'Not a unary operator.')
