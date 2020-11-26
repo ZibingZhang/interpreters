@@ -2,7 +2,7 @@ from __future__ import annotations
 import sys
 import time
 from typing import TYPE_CHECKING
-from callable import Callable
+import callable as ca
 
 if TYPE_CHECKING:
     from typing import List
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from type import LoxValue
 
 
-class _Native(Callable):
+class _Native(ca.LoxCallable):
     def __str__(self) -> str:
         return '<native fn>'
 
@@ -29,7 +29,7 @@ class Print(_Native):
     def arity(self) -> int:
         return 1
 
-    def call(self, interpreter: Interpreter, arguments: List[LoxValue]) -> LoxValue:
+    def call(self, interpreter: Interpreter, arguments: List[LoxValue]) -> None:
         sys.stdout.write(interpreter.stringify(arguments[0]))
 
 
@@ -38,5 +38,5 @@ class PrintLn(_Native):
     def arity(self) -> int:
         return 1
 
-    def call(self, interpreter: Interpreter, arguments: List[LoxValue]) -> LoxValue:
+    def call(self, interpreter: Interpreter, arguments: List[LoxValue]) -> None:
         sys.stdout.write(interpreter.stringify(arguments[0]) + '\n')

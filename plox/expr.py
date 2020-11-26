@@ -30,6 +30,10 @@ class ExprVisitor(abc.ABC):
         ...
 
     @abc.abstractmethod
+    def visit_get_expr(self, expr: Get) -> Any:
+        ...
+
+    @abc.abstractmethod
     def visit_grouping_expr(self, expr: Grouping) -> Any:
         ...
 
@@ -42,7 +46,15 @@ class ExprVisitor(abc.ABC):
         ...
 
     @abc.abstractmethod
+    def visit_set_expr(self, expr: Set) -> Any:
+        ...
+
+    @abc.abstractmethod
     def visit_ternary_expr(self, expr: Ternary) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_this_expr(self, expr: This) -> Any:
         ...
 
     @abc.abstractmethod
@@ -84,6 +96,15 @@ class Call(Expr):
 
 
 @dataclass(frozen=True)
+class Get(Expr):
+    object: Expr
+    name: Token
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_get_expr(self)
+
+
+@dataclass(frozen=True)
 class Grouping(Expr):
     expression: Expr
 
@@ -110,6 +131,16 @@ class Logical(Expr):
 
 
 @dataclass(frozen=True)
+class Set(Expr):
+    object: Expr
+    name: Token
+    value: Expr
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_set_expr(self)
+
+
+@dataclass(frozen=True)
 class Ternary(Expr):
     left: Expr
     operator1: Token
@@ -119,6 +150,14 @@ class Ternary(Expr):
 
     def accept(self, visitor: ExprVisitor) -> Any:
         return visitor.visit_ternary_expr(self)
+
+
+@dataclass(frozen=True)
+class This(Expr):
+    keyword: Token
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_this_expr(self)
 
 
 @dataclass(frozen=True)
@@ -146,8 +185,7 @@ class ASTPrinter(ExprVisitor):
         return self._parenthesize('group', expr.expression)
 
     def visit_literal_expr(self, expr: Literal):
-        if expr.value is None:
-            return 'nil'
+        if expr.value is None: return 'nil'
         return str(expr.value)
 
     def visit_ternary_expr(self, expr: Ternary) -> Any:

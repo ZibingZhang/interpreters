@@ -39,8 +39,8 @@ class Environment:
         else:
             raise RuntimeException(name, f"Undefined variable '{name.lexeme}'.")
 
-    def get_at(self, distance: int, name: Token) -> LoxValue:
-        return self._ancestor(distance).get(name)
+    def get_at(self, distance: int, name: str) -> LoxValue:
+        return self._ancestor(distance).values.get(name)
 
     def _ancestor(self, distance: int):
         env = self

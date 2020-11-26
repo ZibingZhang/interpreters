@@ -6,9 +6,10 @@ from exceptions import Break, Continue, Return, RuntimeException
 import expr as ex
 import natives
 import stmt as st
-from callable import Callable, LoxFunction
-from expr import ExprVisitor
-from stmt import StmtVisitor
+from callable import LoxCallable, LoxFunction
+from classes import LoxClass, LoxInstance
+from expr import ExprVisitor, Get, Set, This
+from stmt import StmtVisitor, Class
 from tokens import TokenType
 
 if TYPE_CHECKING:
@@ -27,7 +28,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
         self._GLOBALS.define('print', natives.Print())
         self._GLOBALS.define('println', natives.PrintLn())
 
-    def visit_assign_expr(self, expr: ex.Assign) -> Any:
+    def visit_assign_expr(self, expr: ex.Assign) -> LoxValue:
         value = self._evaluate(expr.value)
         distance = self._locals.get(expr)
         if distance is None:
@@ -84,12 +85,18 @@ class Interpreter(ExprVisitor, StmtVisitor):
         arguments = []
         for argument in expr.arguments:
             arguments.append(self._evaluate(argument))
-        if not isinstance(callee, Callable):
+        if not isinstance(callee, LoxCallable):
             raise RuntimeException(expr.paren, 'Can only call functions and classes.')
         function = callee
         if len(arguments) != function.arity:
             raise RuntimeException(expr.paren, f'Expected {function.arity} arguments, but got {len(arguments)}.')
         return callee.call(self, arguments)
+
+    def visit_get_expr(self, expr: Get) -> LoxValue:
+        obj = self._evaluate(expr.object)
+        if isinstance(obj, LoxInstance):
+            return obj.get(expr.name)
+        raise RuntimeException(expr.name, 'Only instances have properties')
 
     def visit_grouping_expr(self, expr: ex.Grouping) -> LoxValue:
         return self._evaluate(expr.expression)
@@ -99,13 +106,19 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_logical_expr(self, expr: ex.Logical) -> LoxValue:
         left = self._evaluate(expr.left)
-
         if expr.operator.type is TokenType.OR and self._is_truthy(left):
             return left
         if expr.operator.type is TokenType.AND and not self._is_truthy(left):
             return left
-
         return self._evaluate(expr.right)
+
+    def visit_set_expr(self, expr: Set) -> LoxValue:
+        obj = self._evaluate(expr.object)
+        if not isinstance(obj, LoxInstance):
+            raise RuntimeException(expr.name, 'Only instances have fields.')
+        value = self._evaluate(expr.value)
+        obj.set(expr.name, value)
+        return value
 
     def visit_ternary_expr(self, expr: ex.Ternary) -> LoxValue:
         if expr.operator1.type is TokenType.QUESTION and expr.operator2.type is TokenType.COLON:
@@ -117,6 +130,9 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
         # unreachable
         raise RuntimeError('Unreachable code.')
+
+    def visit_this_expr(self, expr: This) -> Any:
+        return self._lookup_variable(expr.keyword, expr)
 
     def visit_unary_expr(self, expr: ex.Unary) -> LoxValue:
         right = self._evaluate(expr.right)
@@ -135,17 +151,26 @@ class Interpreter(ExprVisitor, StmtVisitor):
     def visit_block_stmt(self, stmt: st.Block) -> None:
         self.execute_block(stmt.statements, Environment(self._environment))
 
-    def visit_break_stmt(self, stmt: st.Break) -> Any:
+    def visit_break_stmt(self, stmt: st.Break) -> None:
         raise Break()
 
-    def visit_continue_stmt(self, stmt: st.Continue) -> Any:
+    def visit_class_stmt(self, stmt: Class) -> None:
+        self._environment.define(stmt.name.lexeme, None)
+        methods = {}
+        for method in stmt.methods:
+            function = LoxFunction(method, self._environment, method.name.lexeme == 'init')
+            methods[method.name.lexeme] = function
+        klass = LoxClass(stmt.name.lexeme, methods)
+        self._environment.assign(stmt.name, klass)
+
+    def visit_continue_stmt(self, stmt: st.Continue) -> None:
         raise Continue()
 
     def visit_expression_stmt(self, stmt: st.Expression) -> None:
         self._evaluate(stmt.expression)
 
     def visit_function_stmt(self, stmt: st.Function) -> None:
-        function = LoxFunction(stmt.name, stmt, self._environment)
+        function = LoxFunction(stmt, self._environment, False)
         self._environment.define(stmt.name.lexeme, function)
 
     def visit_if_stmt(self, stmt: st.If) -> None:
@@ -215,7 +240,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
         if distance is None:
             return self._GLOBALS.get(name)
         else:
-            return self._environment.get_at(distance, name)
+            return self._environment.get_at(distance, name.lexeme)
 
     @staticmethod
     def _is_truthy(value: LoxValue) -> bool:

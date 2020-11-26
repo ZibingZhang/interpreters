@@ -1,13 +1,13 @@
 from __future__ import annotations
 from enum import Enum
 from functools import singledispatchmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import expr as ex
 import lox
 import stmt as st
-from expr import ExprVisitor
+from expr import ExprVisitor, Get, Set, This
 from interpreter import Interpreter
-from stmt import StmtVisitor, Function
+from stmt import StmtVisitor, Function, Class
 
 if TYPE_CHECKING:
     from typing import List, Union
@@ -18,8 +18,9 @@ class Resolver(ExprVisitor, StmtVisitor):
     def __init__(self, interpreter: Interpreter):
         self._interpreter = interpreter
         self._scopes = []
-        self._current_function = _FunctionType.NONE
         self._loop_depth = 0
+        self._current_function = _FunctionType.NONE
+        self._current_class = _ClassType.NONE
 
     def visit_assign_expr(self, expr: ex.Assign) -> None:
         self.resolve(expr.value)
@@ -34,6 +35,9 @@ class Resolver(ExprVisitor, StmtVisitor):
         for arg in expr.arguments:
             self.resolve(arg)
 
+    def visit_get_expr(self, expr: Get) -> None:
+        self.resolve(expr.object)
+
     def visit_grouping_expr(self, expr: ex.Grouping) -> None:
         self.resolve(expr.expression)
 
@@ -44,10 +48,20 @@ class Resolver(ExprVisitor, StmtVisitor):
         self.resolve(expr.left)
         self.resolve(expr.right)
 
+    def visit_set_expr(self, expr: Set) -> Any:
+        self.resolve(expr.object)
+        self.resolve(expr.value)
+
     def visit_ternary_expr(self, expr: ex.Ternary) -> None:
         self.resolve(expr.left)
         self.resolve(expr.center)
         self.resolve(expr.right)
+
+    def visit_this_expr(self, expr: This) -> None:
+        if self._current_class == _ClassType.NONE:
+            lox.Lox.error_token(expr.keyword, "Can't use 'this' outside of a class.")
+            return
+        self._resolve_local(expr, expr.keyword)
 
     def visit_unary_expr(self, expr: ex.Unary) -> None:
         self.resolve(expr.right)
@@ -65,6 +79,21 @@ class Resolver(ExprVisitor, StmtVisitor):
     def visit_break_stmt(self, stmt: st.Break) -> None:
         if self._loop_depth == 0:
             lox.Lox.error_token(stmt.keyword, "Can't break from outside of loop.")
+
+    def visit_class_stmt(self, stmt: Class) -> None:
+        enclosing_class = self._current_class
+        self._current_class = _ClassType.CLASS
+        self._declare(stmt.name)
+        self._define(stmt.name)
+        self._begin_scope()
+        self._scopes[-1]['this'] = True
+        for method in stmt.methods:
+            declaration = _FunctionType.METHOD
+            if method.name.lexeme == 'init':
+                declaration = _FunctionType.INITIALIZER
+            self._resolve_function(method, declaration)
+        self._end_scope()
+        self._current_class = enclosing_class
 
     def visit_continue_stmt(self, stmt: st.Continue) -> None:
         if self._loop_depth == 0:
@@ -85,9 +114,11 @@ class Resolver(ExprVisitor, StmtVisitor):
             self.resolve(stmt.else_branch)
 
     def visit_return_stmt(self, stmt: st.Return) -> None:
-        if self._current_function is not _FunctionType.FUNCTION:
+        if self._current_function not in {_FunctionType.FUNCTION, _FunctionType.METHOD}:
             lox.Lox.error_token(stmt.keyword, "Can't return from top-level code.")
         if stmt.value is not None:
+            if self._current_function is _FunctionType.INITIALIZER:
+                lox.Lox.error_token(stmt.keyword, "Can't return a value from an initializer.")
             self.resolve(stmt.value)
 
     def visit_var_stmt(self, stmt: st.Var) -> None:
@@ -157,5 +188,12 @@ class Resolver(ExprVisitor, StmtVisitor):
 
 
 class _FunctionType(Enum):
-    NONE     = 0
-    FUNCTION = 1
+    NONE        = 0
+    FUNCTION    = 1
+    INITIALIZER = 2
+    METHOD      = 3
+
+
+class _ClassType(Enum):
+    NONE  = 0
+    CLASS = 1

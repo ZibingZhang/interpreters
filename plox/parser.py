@@ -33,17 +33,44 @@ class Parser:
 
     def _declaration(self) -> Optional[st.Stmt]:
         try:
+            if self._match(TokenType.CLASS):
+                return self._class_declaration()
+            if self._match(TokenType.FUN):
+                return self._function('function')
             if self._match(TokenType.VAR):
                 return self._variable_declaration()
             return self._statement()
         except _ParseError:
             self._synchronize()
 
+    def _class_declaration(self) -> st.Class:
+        name = self._consume(TokenType.IDENTIFIER, 'Expect class name.')
+        self._consume(TokenType.LEFT_BRACE, "Expect '{' before class body.")
+        methods = []
+        while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end:
+            methods.append(self._function('method'))
+        self._consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.")
+        return st.Class(name, methods)
+
     def _variable_declaration(self) -> st.Var:
         name = self._consume(TokenType.IDENTIFIER, 'Expect variable name.')
         initializer = self._expression() if self._match(TokenType.EQUAL) else None
         self._consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.")
         return st.Var(name, initializer)
+
+    def _function(self, kind: str) -> st.Function:
+        name = self._consume(TokenType.IDENTIFIER, f'Expect {kind} name.')
+        self._consume(TokenType.LEFT_PAREN, f"Expect '(' after {kind} name.")
+        parameters = []
+        if not self._check(TokenType.RIGHT_PAREN):
+            parameters.append(self._consume(TokenType.IDENTIFIER, 'Expect parameter name.'))
+            while self._match(TokenType.COMMA):
+                if len(parameters) >= 255:
+                    self._error(self._peek(), "Can't have more that 255 parameters.")
+        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.")
+        self._consume(TokenType.LEFT_BRACE, f"Expect '{{' before {kind} body.")
+        body = self._block()
+        return st.Function(name, parameters, body)
 
     def _statement(self) -> st.Stmt:
         if self._match(TokenType.BREAK):
@@ -52,8 +79,6 @@ class Parser:
             return self._continue_statement()
         if self._match(TokenType.FOR):
             return self._for_statement()
-        if self._match(TokenType.FUN):
-            return self._function('function')
         if self._match(TokenType.IF):
             return self._if_statement()
         if self._match(TokenType.RETURN):
@@ -136,20 +161,6 @@ class Parser:
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after block.")
         return statements
 
-    def _function(self, kind: str) -> st.Function:
-        name = self._consume(TokenType.IDENTIFIER, f'Expect {kind} name.')
-        self._consume(TokenType.LEFT_PAREN, f"Expect '(' after {kind} name.")
-        parameters = []
-        if not self._check(TokenType.RIGHT_PAREN):
-            parameters.append(self._consume(TokenType.IDENTIFIER, 'Expect parameter name.'))
-            while self._match(TokenType.COMMA):
-                if len(parameters) >= 255:
-                    self._error(self._peek(), "Can't have more that 255 parameters.")
-        self._consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.")
-        self._consume(TokenType.LEFT_BRACE, f"Expect '{{' before {kind} body.")
-        body = self._block()
-        return st.Function(name, parameters, body)
-
     def _expression(self) -> ex.Expr:
         return self._sequence()
 
@@ -163,17 +174,15 @@ class Parser:
 
     def _assignment(self) -> ex.Expr:
         expr = self._ternary()
-
         if self._match(TokenType.EQUAL):
             equals = self._previous
             value = self._assignment()
-
             if isinstance(expr, ex.Variable):
                 name = expr.name
                 return ex.Assign(name, value)
-
+            if isinstance(expr, ex.Get):
+                return ex.Set(expr.object, expr.name, value)
             self._error(equals, 'Invalid assignment target.')
-
         return expr
 
     def _ternary(self) -> ex.Expr:
@@ -265,6 +274,9 @@ class Parser:
         while True:
             if self._match(TokenType.LEFT_PAREN):
                 expr = self._finish_call(expr)
+            elif self._match(TokenType.DOT):
+                name = self._consume(TokenType.IDENTIFIER, "Expect property name after '.'.")
+                expr = ex.Get(expr, name)
             else:
                 break
         return expr
@@ -278,6 +290,8 @@ class Parser:
             return ex.Literal(None)
         if self._match(TokenType.NUMBER, TokenType.STRING):
             return ex.Literal(self._previous.literal)
+        if self._match(TokenType.THIS):
+            return ex.This(self._previous)
         if self._match(TokenType.IDENTIFIER):
             return ex.Variable(self._previous)
         if self._match(TokenType.LEFT_PAREN):

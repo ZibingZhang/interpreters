@@ -2,15 +2,14 @@ Grammar (Extended Backus–Naur Form)
 ===================================
 program        = declaration* EOF ;
 
-declaration    = fun-decl
+declaration    = class-decl
+               | fun-decl
                | var-decl
                | statement ;
 
+class-decl     = "class" IDENTIFIER "{" function* "}" ;
 fun-decl       = "fun" function ;
-function       = IDENTIFIER "(" parameters? ")" block ;
-
 var-decl       = "var" IDENTIFIER ( "=" expression )? ";" ;
-
 statement      = break-stmt
                | continue-stmt
                | expr-stmt
@@ -20,6 +19,7 @@ statement      = break-stmt
                | return-stmt
                | while-stmt
                | block ;
+function       = IDENTIFIER "(" parameters? ")" block ;
 
 break-stmt    = "break" expression ";" ;
 continue-stmt    = "continue" expression ";" ;
@@ -35,7 +35,7 @@ block          = "{" declaration* "}" ;
 
 expression     = sequence ;
 sequence       = assignment ( "," assignment )* ;
-assignment     = IDENTIFIER "=" assignment
+assignment     = ( call "." )? IDENTIFIER "=" assignment
                | ternary ;
 ternary        = logical-or "?" ternary ":" ternary ;
 logical-or     = logical-and ( "or" logical-and )* ;
@@ -46,7 +46,7 @@ term           = factor ( ( "-" | "+" ) factor )* ;
 factor         = unary ( ( "/" | "*" ) unary )* ;
 unary          = ( "!" | "-" ) unary
                | call ;
-call           = primary ( "(" arguments? ")" )* ;
+call           = primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 primary        = "true" | "false" | "nil"
                | NUMBER | STRING
                | "(" expression ")" ";"
