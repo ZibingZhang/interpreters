@@ -8,7 +8,7 @@ import natives
 import stmt as st
 from callable import LoxCallable, LoxFunction
 from classes import LoxClass, LoxInstance
-from expr import ExprVisitor, Get, Set, This
+from expr import ExprVisitor, Get, Set, This, Super
 from stmt import StmtVisitor, Class
 from tokens import TokenType
 
@@ -120,6 +120,18 @@ class Interpreter(ExprVisitor, StmtVisitor):
         obj.set(expr.name, value)
         return value
 
+    def visit_super_expr(self, expr: Super) -> Any:
+        distance = self._locals[expr]
+        superclass = self._environment.get_at(distance, 'super')
+        obj = self._environment.get_at(distance - 1, 'this')
+        if not isinstance(superclass, LoxClass):
+            # unreachable
+            raise RuntimeError('Unreachable code.')
+        method = superclass.find_method(expr.method.lexeme)
+        if method is None:
+            raise RuntimeException(expr.method, f"Undefined property '{expr.method.lexeme}'.")
+        return method.bind(obj)
+
     def visit_ternary_expr(self, expr: ex.Ternary) -> LoxValue:
         if expr.operator1.type is TokenType.QUESTION and expr.operator2.type is TokenType.COLON:
             pred = self._evaluate(expr.left)
@@ -155,12 +167,22 @@ class Interpreter(ExprVisitor, StmtVisitor):
         raise Break()
 
     def visit_class_stmt(self, stmt: Class) -> None:
+        superclass = None
+        if stmt.superclass is not None:
+            superclass = self._evaluate(stmt.superclass)
+            if not isinstance(superclass, LoxClass):
+                raise RuntimeException(stmt.superclass.name, 'Superclass must be a class.')
         self._environment.define(stmt.name.lexeme, None)
+        if stmt.superclass is not None:
+            self._environment = Environment(self._environment)
+            self._environment.define('super', superclass)
         methods = {}
         for method in stmt.methods:
             function = LoxFunction(method, self._environment, method.name.lexeme == 'init')
             methods[method.name.lexeme] = function
-        klass = LoxClass(stmt.name.lexeme, methods)
+        klass = LoxClass(stmt.name.lexeme, superclass, methods)
+        if superclass is not None:
+            self._environment = self._environment.enclosing
         self._environment.assign(stmt.name, klass)
 
     def visit_continue_stmt(self, stmt: st.Continue) -> None:

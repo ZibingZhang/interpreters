@@ -7,7 +7,8 @@ declaration    = class-decl
                | var-decl
                | statement ;
 
-class-decl     = "class" IDENTIFIER "{" function* "}" ;
+class-decl     = "class" IDENTIFIER ( "<" IDENTIFIER )?
+                 "{" function* "}" ;
 fun-decl       = "fun" function ;
 var-decl       = "var" IDENTIFIER ( "=" expression )? ";" ;
 statement      = break-stmt
@@ -22,7 +23,7 @@ statement      = break-stmt
 function       = IDENTIFIER "(" parameters? ")" block ;
 
 break-stmt    = "break" expression ";" ;
-continue-stmt    = "continue" expression ";" ;
+continue-stmt  = "continue" expression ";" ;
 expr-stmt      = expression ";" ;
 for-stmt       = "for" "(" (var-decl | expr-stmt | ";")
                  expression? ;
@@ -48,9 +49,8 @@ unary          = ( "!" | "-" ) unary
                | call ;
 call           = primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 primary        = "true" | "false" | "nil"
-               | NUMBER | STRING
-               | "(" expression ")" ";"
-               | IDENTIFIER ;
+               | NUMBER | STRING | IDENTIFIER | "(" expression ")" ";"
+               | "super" "." IDENTIFIER ;
 
 parameters     = IDENTIFIER ( "," IDENTIFIER )* ;
 arguments      = expression ( "," expression )* ;

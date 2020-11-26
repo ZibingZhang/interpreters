@@ -45,12 +45,16 @@ class Parser:
 
     def _class_declaration(self) -> st.Class:
         name = self._consume(TokenType.IDENTIFIER, 'Expect class name.')
+        superclass = None
+        if self._match(TokenType.LESS):
+            self._consume(TokenType.IDENTIFIER, 'Expect superclass name.')
+            superclass = ex.Variable(self._previous)
         self._consume(TokenType.LEFT_BRACE, "Expect '{' before class body.")
         methods = []
         while not self._check(TokenType.RIGHT_BRACE) and not self._is_at_end:
             methods.append(self._function('method'))
         self._consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.")
-        return st.Class(name, methods)
+        return st.Class(name, superclass, methods)
 
     def _variable_declaration(self) -> st.Var:
         name = self._consume(TokenType.IDENTIFIER, 'Expect variable name.')
@@ -290,6 +294,11 @@ class Parser:
             return ex.Literal(None)
         if self._match(TokenType.NUMBER, TokenType.STRING):
             return ex.Literal(self._previous.literal)
+        if self._match(TokenType.SUPER):
+            keyword = self._previous
+            self._consume(TokenType.DOT, "Expect a '.' after 'super'.")
+            method = self._consume(TokenType.IDENTIFIER, 'Expect superclass method name.')
+            return ex.Super(keyword, method)
         if self._match(TokenType.THIS):
             return ex.This(self._previous)
         if self._match(TokenType.IDENTIFIER):

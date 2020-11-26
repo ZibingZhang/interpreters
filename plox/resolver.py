@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import expr as ex
 import lox
 import stmt as st
-from expr import ExprVisitor, Get, Set, This
+from expr import ExprVisitor, Get, Set, This, Super
 from interpreter import Interpreter
 from stmt import StmtVisitor, Function, Class
 
@@ -52,6 +52,13 @@ class Resolver(ExprVisitor, StmtVisitor):
         self.resolve(expr.object)
         self.resolve(expr.value)
 
+    def visit_super_expr(self, expr: Super) -> Any:
+        if self._current_class is _ClassType.NONE:
+            lox.Lox.error_token(expr.keyword, "Can't use 'super' outside of a class.")
+        elif self._current_class is not _ClassType.SUBCLASS:
+            lox.Lox.error_token(expr.keyword, "Can't use 'super' in a class with no superclass.")
+        self._resolve_local(expr, expr.keyword)
+
     def visit_ternary_expr(self, expr: ex.Ternary) -> None:
         self.resolve(expr.left)
         self.resolve(expr.center)
@@ -85,6 +92,13 @@ class Resolver(ExprVisitor, StmtVisitor):
         self._current_class = _ClassType.CLASS
         self._declare(stmt.name)
         self._define(stmt.name)
+        if stmt.superclass is not None and stmt.name.lexeme == stmt.superclass.name.lexeme:
+            lox.Lox.error_token(stmt.superclass.name, "A class can't inherit from itself.")
+        if stmt.superclass is not None:
+            self._current_class = _ClassType.SUBCLASS
+            self.resolve(stmt.superclass)
+            self._begin_scope()
+            self._scopes[-1]['super'] = True
         self._begin_scope()
         self._scopes[-1]['this'] = True
         for method in stmt.methods:
@@ -93,6 +107,8 @@ class Resolver(ExprVisitor, StmtVisitor):
                 declaration = _FunctionType.INITIALIZER
             self._resolve_function(method, declaration)
         self._end_scope()
+        if stmt.superclass is not None:
+            self._end_scope()
         self._current_class = enclosing_class
 
     def visit_continue_stmt(self, stmt: st.Continue) -> None:
@@ -195,5 +211,6 @@ class _FunctionType(Enum):
 
 
 class _ClassType(Enum):
-    NONE  = 0
-    CLASS = 1
+    NONE     = 0
+    CLASS    = 1
+    SUBCLASS = 2

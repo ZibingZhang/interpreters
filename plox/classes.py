@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class LoxClass(LoxCallable):
     name: str
+    superclass: LoxClass
     methods: Dict[str, LoxFunction]
 
     @property
@@ -33,7 +34,10 @@ class LoxClass(LoxCallable):
         return instance
 
     def find_method(self, name: str) -> Optional[LoxFunction]:
-        return self.methods.get(name)
+        if name in self.methods:
+            return self.methods[name]
+        if self.superclass is not None:
+            return self.superclass.find_method(name)
 
 
 @dataclass(frozen=True)

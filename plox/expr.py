@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Any, List
-    from stmt import Stmt
     from tokens import Token
     from type import Literal
 
@@ -47,6 +46,10 @@ class ExprVisitor(abc.ABC):
 
     @abc.abstractmethod
     def visit_set_expr(self, expr: Set) -> Any:
+        ...
+
+    @abc.abstractmethod
+    def visit_super_expr(self, expr: Super) -> Any:
         ...
 
     @abc.abstractmethod
@@ -138,6 +141,15 @@ class Set(Expr):
 
     def accept(self, visitor: ExprVisitor) -> Any:
         return visitor.visit_set_expr(self)
+
+
+@dataclass(frozen=True)
+class Super(Expr):
+    keyword: Token
+    method: Token
+
+    def accept(self, visitor: ExprVisitor) -> Any:
+        return visitor.visit_super_expr(self)
 
 
 @dataclass(frozen=True)

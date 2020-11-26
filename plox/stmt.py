@@ -76,6 +76,7 @@ class Break(Stmt):
 @dataclass(frozen=True)
 class Class(Stmt):
     name: Token
+    superclass: Optional[ex.Variable]
     methods: List[Function]
 
     def accept(self, visitor: StmtVisitor) -> Any:
