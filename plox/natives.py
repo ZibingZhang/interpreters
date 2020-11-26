@@ -20,8 +20,8 @@ class Clock(_Native):
     def arity(self) -> int:
         return 0
 
-    def call(self, interpreter: Interpreter, arguments: List[LoxValue]) -> int:
-        return int(time.time())
+    def call(self, interpreter: Interpreter, arguments: List[LoxValue]) -> float:
+        return float(time.time())
 
 
 class Print(_Native):
