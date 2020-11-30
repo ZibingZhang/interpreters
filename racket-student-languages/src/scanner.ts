@@ -7,7 +7,7 @@ import {
   RacketInexactFraction,
   RacketNumber,
   RacketRealNumber
-} from './literals.js';
+} from './values.js';
 import { Token, TokenType } from './tokens.js'
 import * as util from './utils.js';
 

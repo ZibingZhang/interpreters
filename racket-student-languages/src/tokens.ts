@@ -1,4 +1,4 @@
-import { RacketValue } from './literals.js';
+import { RacketValue } from './values.js';
 
 export enum TokenType {
   LEFT_PAREN = '(',
