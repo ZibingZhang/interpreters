@@ -1,6 +1,6 @@
 import * as ir1 from './ir1.js';
-import interpreter from './interpreter.js';
 import { Token, TokenType } from './tokens.js';
+import racket from './racket.js';
 
 class Parser {
   private static ParserError = class extends Error {
@@ -32,11 +32,13 @@ class Parser {
       }
     }
 
-    return [];
+    return exprs;
   }
 
+  //
+
   private error(msg: string): void {
-    interpreter.error(`read-syntax: ${msg}`);
+    racket.error(`read-syntax: ${msg}`);
   }
 
   //

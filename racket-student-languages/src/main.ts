@@ -1,5 +1,5 @@
-import interpreter from './interpreter.js';
+import racket from './racket.js';
 
 const text: string = document.getElementById('code')?.innerText || '';
 
-interpreter.run(text);
+racket.run(text);

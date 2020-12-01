@@ -1,5 +1,4 @@
 import { DivByZero } from './errors.js';
-import interpreter from './interpreter.js';
 import {
   RacketComplexNumber,
   RacketExactNumber,
@@ -9,7 +8,8 @@ import {
   RacketRealNumber
 } from './values.js';
 import { Token, TokenType } from './tokens.js'
-import * as util from './utils.js';
+import * as utils from './utils.js';
+import racket from './racket.js';
 
 
 class Scanner {
@@ -69,7 +69,7 @@ class Scanner {
   }
 
   error(msg: string): void {
-    interpreter.error(`read-syntax: ${msg}`);
+    racket.error(`read-syntax: ${msg}`);
   }
 
   nameToToken(name: string): Token {
@@ -85,8 +85,12 @@ class Scanner {
     // special values
     if (text === '+NaN.0') return new RacketInexactFloat(NaN);
     if (text === '-NaN.0') return new RacketInexactFloat(NaN);
+    if (text === '+NaN.f') return new RacketInexactFloat(NaN);
+    if (text === '-NaN.f') return new RacketInexactFloat(NaN);
     if (text === '+inf.0') return new RacketInexactFloat(Infinity);
-    if (text === '-inf.0') return new RacketInexactFloat(-Infinity);
+    if (text === '+inf.0') return new RacketInexactFloat(Infinity);
+    if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
+    if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
 
     // numbers can start with a #e or #i
     let isExact = true;
@@ -181,9 +185,12 @@ class Scanner {
 
       if (denominator === '') return false;
       let num = BigInt(numerator);
+      let numSign = num > 0 ? 1n : -1n;
+      num *= numSign;
       let denom = BigInt(denominator);
       if (denom === 0n) throw DivByZero;
-      let gcd = util.gcd(num, denom);
+      let gcd = utils.gcd(num, denom);
+      num *= numSign;
       num /= gcd;
       denom /= gcd;
       if (isExact) real = new RacketExactNumber(num, denom);
@@ -262,7 +269,7 @@ class Scanner {
       let num = BigInt(numerator);
       let denom = BigInt(denominator);
       if (denom === 0n) throw DivByZero;
-      let gcd = util.gcd(num, denom);
+      let gcd = utils.gcd(num, denom);
       num /= gcd;
       denom /= gcd;
       if (isExact) imaginary = new RacketExactNumber(num, denom);

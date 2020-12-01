@@ -12,10 +12,10 @@ export interface ExprVisitor {
 }
 
 export class Call implements Expr {
-  callee: Expr | undefined;
+  callee: Expr;
   args: Expr[]
 
-  constructor(callee: Expr | undefined, args: Expr[]) {
+  constructor(callee: Expr, args: Expr[]) {
     this.callee = callee;
     this.args = args;
   }

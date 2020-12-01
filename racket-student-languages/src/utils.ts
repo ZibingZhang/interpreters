@@ -9,7 +9,7 @@ export function gcd(a: bigint, b: bigint): bigint {
       return 2n * gcd(a / 2n, b / 2n);
     }
   } else {  // a is odd
-    if (b % 2n === 1n) {  // b is even
+    if (b % 2n === 0n) {  // b is even
       return gcd(a, b / 2n);
     }
 
