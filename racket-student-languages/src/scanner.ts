@@ -96,261 +96,66 @@ class Scanner {
     if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
     if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
 
-    // numbers can start with a #e or #i
-    let isExact = true;  // all literals can be expressed as an exact number
-    if (text.charAt(0) === '#') {
-      let exactType = text.charAt(1);
-      if (exactType === 'i') isExact = false;
-      else if (exactType !== 'e') return false;
-      text = text.substr(2);
-      if (text === '') throw new Scanner.ScannerError('no digits');
-    }
+    let match = /^(#i|#e)?(\+|-)?(\d+#*)?(?:(\/|\.)(\d+#*)?)?(?:(\+|-)(\d+#*)?(?:(\/|\.)(\d+#*)?)?i)?$/.exec(text);
+    if (match === null) return false;
+    
+    let isExact = match[1] !== '#i';
+    let realSignStr = match[2];
+    let realNumerator = BigInt(match[3]?.replace(/#/g, '0') || -1n);
+    let realDecimalOrFraction: string | undefined = match[4];
+    let realRest = BigInt(match[5]?.replace(/#/g, '0') || -1n);
+    let imaginarySignStr = match[6];
+    let imaginaryNumerator = BigInt(match[7]?.replace(/#/g, '0') || -1n);
+    let imaginaryDecimalOrFraction: string | undefined = match[8];
+    let imaginaryRest = BigInt(match[9]?.replace(/#/g, '0') || -1n);
 
-    // flags and variables to keep track of state
-    let isComplex = false;
-    let complexSign = 1n;
+    if (realSignStr !== undefined && realNumerator === -1n && realRest === -1n) return false;
+    if (realDecimalOrFraction !== undefined && realNumerator === -1n && realRest === -1n) return false;
+    if (realDecimalOrFraction === '/' && (realNumerator === -1n || realRest === -1n)) return false;
+    if (imaginarySignStr !== undefined && imaginaryNumerator === -1n && imaginaryRest === -1n) return false;
+    if (imaginaryDecimalOrFraction !== undefined && imaginaryNumerator === -1n && imaginaryRest === -1n) return false;
+    if (imaginaryDecimalOrFraction === '/' && (imaginaryNumerator === -1n || imaginaryRest === -1n)) return false;
+
+    let realSign = realSignStr !== '-' ? 1n : -1n;
+    let imaginarySign = imaginarySignStr !== '-' ? 1n : -1n;
+    if (realDecimalOrFraction === '.' && realRest === -1n) realDecimalOrFraction = undefined; 
+    if (imaginaryDecimalOrFraction === '.' && imaginaryRest === -1n) imaginaryDecimalOrFraction = undefined; 
+
     let real: RacketRealNumber;
     let imaginary: RacketRealNumber;
-    let isDecimal = false;
-    let isFraction = false;
-    let isSigned = false;
-    let numerator = '';
-    let denominator;
-    let seenPound = false;
 
-    // numbers can be explicitly signed
-    if (text.charAt(0) === '+' || text.charAt(0) === '-') {
-      numerator += text.charAt(0);
-      text = text.substr(1);
-      isSigned = true;
-    }
-
-    for (let i = 0; i < text.length; i++) {
-      let char = text.charAt(i);
-      if (char === '.') {
-        isDecimal = true;
-        text = text.substr(i + 1);
-        break;
-      } else if (char === '/') {
-        isFraction = true;
-        text = text.substr(i + 1);
-        break;
-      } else if (char === '+' || char === '-') {
-        if (isSigned && numerator.length === 1) return false;
-        isComplex = true;
-        if (char === '-') complexSign = -1n;
-        text = text.substr(i + 1);
-        break;
-      } else if (isSigned && char === 'i') {
-        if (i + 1 !== text.length) return false;
-        if (numerator.length === 1) numerator += '1';
-        if (isExact) return new RacketComplexNumber(new RacketExactNumber(0n, 1n), new RacketExactNumber(BigInt(numerator), 1n));
-        else return new RacketComplexNumber(new RacketInexactFraction(0n, 1n), new RacketInexactFraction(BigInt(numerator), 1n));
-      } else if (char === '#') {
-        if (numerator === '' || isSigned && numerator.length === 1) return false;
-        seenPound = true;
-        numerator += '0';
-      } else if (char < '0' || char > '9') {
-        return false
-      } else {
-        if (seenPound) return false;
-        numerator += char;
-      }
-    }
-
-    if (isDecimal) {
-      seenPound = false;
-      denominator = 1n;
-      for (let i = 0; i < text.length; i++) {
-        let char = text.charAt(i);
-        if (char === '+' || char === '-') {
-          isComplex = true;
-          text = text.substr(i+1);
-          if (char === '-') complexSign = -1n;
-          break;
-        } else if (char === 'i') {
-          if (isSigned === false) return false;
-          if (i + 1 !== text.length) return false;
-          if (numerator.length === 1) return false;
-          if (isExact) return new RacketComplexNumber(
-            new RacketExactNumber(0n, 1n),
-            new RacketExactNumber(BigInt(numerator), denominator)
-          );
-          else return new RacketComplexNumber(
-            new RacketInexactFraction(0n, 0n),
-            new RacketInexactFraction(BigInt(numerator), denominator)
-          );
-        } else if (char === '#') {
-          seenPound = true;
-        } else if (char < '0' || char > '9') {
-          return false;
-        } else {
-          if (seenPound) return false;
-          numerator += char;
-          denominator *= 10n;
-        }
-      }
-      if (isSigned && numerator.length === 1) return false;
-      if (numerator === '.') return false;
-      if (isExact) real = new RacketExactNumber(BigInt(numerator), denominator);
-      else real = new RacketInexactFraction(BigInt(numerator), denominator);
-    } else if (isFraction) {
-      if (numerator === '' || isSigned && numerator.length === 1) return false;
-      seenPound = false;
-      denominator = '';
-      for (let i = 0; i < text.length; i++) {
-        let char = text.charAt(i);
-        if (char === '+' || char === '-') {
-          if (denominator === '') return false;
-          isComplex = true;
-          text = text.substr(i+1);
-          if (char === '-') complexSign = -1n;
-          break;
-        } else if (char === 'i') {
-          if (isSigned === false) return false;
-          if (i + 1 !== text.length) return false;
-          if (numerator.length === 1) return false;
-
-          if (denominator === '') return false;
-          let num = BigInt(numerator);
-          let numSign = num > 0 ? 1n : -1n;
-          num *= numSign;
-          let denom = BigInt(denominator);
-          if (denom === 0n) throw DivByZero;
-          let gcd = utils.gcd(num, denom);
-          num *= numSign;
-          num /= gcd;
-          denom /= gcd;
-          if (isExact) return new RacketComplexNumber(
-            new RacketExactNumber(0n, 1n),
-            new RacketExactNumber(num, denom)
-          );
-          else return new RacketComplexNumber(
-            new RacketInexactFraction(0n, 1n),
-            new RacketInexactFraction(num, denom)
-          );
-        } else if (char === '#') {
-          if (denominator === '') return false;
-          seenPound = true;
-          denominator += '0';
-        } else if (char < '0' || char > '9') {
-          return false;
-        } else {
-          if (seenPound) return false;
-          denominator += char;
-        }
-      }
-
-      if (denominator === '') return false;
-      let num = BigInt(numerator);
-      let numSign = num > 0 ? 1n : -1n;
-      num *= numSign;
-      let denom = BigInt(denominator);
-      if (denom === 0n) throw DivByZero;
-      let gcd = utils.gcd(num, denom);
-      num *= numSign;
-      num /= gcd;
-      denom /= gcd;
-      if (isExact) real = new RacketExactNumber(num, denom);
-      else real = new RacketInexactFraction(num, denom);
+    if (realDecimalOrFraction === undefined) {
+      if (isExact) real = new RacketExactNumber(realSign * realNumerator, 1n);
+      else real = new RacketInexactFraction(realSign * realNumerator, 1n);
+    } else if (realDecimalOrFraction === '.') {
+      let denominator = 10n ** BigInt(realRest.toString().length);
+      if (isExact) real = new RacketExactNumber(realSign * realNumerator * denominator + realRest, denominator);
+      else real = new RacketInexactFraction(realSign * realNumerator * denominator + realRest, denominator);
+    } else if (realDecimalOrFraction === '/') {
+      let gcd = utils.gcd(realNumerator, realRest);
+      if (isExact) real = new RacketExactNumber(realSign * realNumerator / gcd, realRest / gcd);
+      else real = new RacketInexactFraction(realSign * realNumerator / gcd, realRest / gcd);
     } else {
-      if (numerator === '+' || numerator === '-') return false;
-      if (isExact) real = new RacketExactNumber(BigInt(numerator), 1n);
-      else real = new RacketInexactFraction(BigInt(numerator), 1n);
+      throw new Error('Unreachable code.');
     }
 
-    if (!isComplex) return real;
+    if (imaginarySignStr === undefined) return real;
 
-    isDecimal = false;
-    isFraction = false;
-    numerator = '';
-    denominator = undefined;
-    seenPound = false;
-
-    for (let i = 0; i < text.length; i++) {
-      let char = text.charAt(i);
-      if (char === '.') {
-        isDecimal = true;
-        text = text.substr(i + 1);
-        break;
-      } else if (char === '/') {
-        isFraction = true;
-        text = text.substr(i + 1);
-        break;
-      } else if (char === 'i') {
-        if (i + 1 !== text.length) return false;
-        if (numerator === '') numerator = '1';
-        if (isExact) return new RacketComplexNumber(real, new RacketExactNumber(complexSign * BigInt(numerator), 1n));
-        else return new RacketComplexNumber(real, new RacketInexactFraction(complexSign * BigInt(numerator), 1n));
-      } else if (char === '#') {
-        seenPound = true;
-        numerator += '0';
-      } else if (char < '0' || char > '9') {
-        if (seenPound) return false;
-        return false
-      } else {
-        numerator += char;
-      }
-    }
-    
-    let seenI = false;
-    if (isDecimal) {
-      seenPound = false;
-      denominator = 1n;
-      for (let i = 0; i < text.length; i++) {
-        let char = text.charAt(i);
-        if (char === 'i') {
-          if (i + 1 !== text.length) return false;
-          seenI = true;
-        } else if (char === '#') {
-          seenPound = true;
-        } else if (char < '0' || char > '9') {
-          return false;
-        } else {
-          if (seenPound) return false;
-          numerator += char;
-          denominator *= 10n;
-        }
-      }
-
-      if (seenI === false) return false;
-      if (numerator === '.') return false;
-      if (isExact) imaginary = new RacketExactNumber(BigInt(numerator), denominator);
-      else imaginary = new RacketInexactFraction(BigInt(numerator), denominator);
-    } else if (isFraction) {
-      seenPound = false;
-      denominator = '';
-      for (let i = 0; i < text.length; i++) {
-        let char = text.charAt(i);
-        if (char === 'i') {
-          if (i + 1 !== text.length) return false;
-          seenI = true;
-        } else if (char === '#') {
-          seenPound = true;
-          denominator += '0';
-        } else if (char < '0' || char > '9') {
-          return false;
-        } else {
-          if (seenPound) return false;
-          denominator += char;
-        }
-      }
-
-      if (seenI === false) return false;
-      if (denominator === '') return false;
-      let num = BigInt(numerator);
-      let denom = BigInt(denominator);
-      if (denom === 0n) throw DivByZero;
-      let gcd = utils.gcd(num, denom);
-      num /= gcd;
-      denom /= gcd;
-      if (isExact) imaginary = new RacketExactNumber(num, denom);
-      else imaginary = new RacketInexactFraction(num, denom);
+    if (imaginaryDecimalOrFraction === undefined) {
+      if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator, 1n);
+      else imaginary = new RacketInexactFraction(imaginarySign * imaginaryNumerator, 1n);
+    } else if (imaginaryDecimalOrFraction === '.') {
+      let denominator = 10n ** BigInt(imaginaryRest.toString().length);
+      if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator * denominator + imaginaryRest, denominator);
+      else imaginary = new RacketInexactFraction(imaginarySign * imaginaryNumerator * denominator + imaginaryRest, denominator);
+    } else if (imaginaryDecimalOrFraction === '/') {
+      let gcd = utils.gcd(realNumerator, realRest);
+      if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator / gcd, imaginaryRest / gcd);
+      else imaginary = new RacketInexactFraction(imaginarySign * imaginaryNumerator / gcd, imaginaryRest / gcd);
     } else {
-      if (isExact) imaginary = new RacketExactNumber(BigInt(numerator), 1n);
-      else imaginary = new RacketInexactFraction(BigInt(numerator), 1n);
+      throw new Error('Unreachable code.');
     }
-    
+
     return new RacketComplexNumber(real, imaginary);
   }
 }
