@@ -129,8 +129,8 @@ class Scanner {
       else real = new RacketInexactFraction(realSign * realNumerator, 1n);
     } else if (realDecimalOrFraction === '.') {
       let denominator = 10n ** BigInt(realRest.toString().length);
-      if (isExact) real = new RacketExactNumber(realSign * realNumerator * denominator + realRest, denominator);
-      else real = new RacketInexactFraction(realSign * realNumerator * denominator + realRest, denominator);
+      if (isExact) real = new RacketExactNumber(realSign * (realNumerator * denominator + realRest), denominator);
+      else real = new RacketInexactFraction(realSign * (realNumerator * denominator + realRest), denominator);
     } else if (realDecimalOrFraction === '/') {
       let gcd = utils.gcd(realNumerator, realRest);
       if (isExact) real = new RacketExactNumber(realSign * realNumerator / gcd, realRest / gcd);
@@ -146,8 +146,8 @@ class Scanner {
       else imaginary = new RacketInexactFraction(imaginarySign * imaginaryNumerator, 1n);
     } else if (imaginaryDecimalOrFraction === '.') {
       let denominator = 10n ** BigInt(imaginaryRest.toString().length);
-      if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator * denominator + imaginaryRest, denominator);
-      else imaginary = new RacketInexactFraction(imaginarySign * imaginaryNumerator * denominator + imaginaryRest, denominator);
+      if (isExact) imaginary = new RacketExactNumber(imaginarySign * (imaginaryNumerator * denominator + imaginaryRest), denominator);
+      else imaginary = new RacketInexactFraction(imaginarySign * (imaginaryNumerator * denominator + imaginaryRest), denominator);
     } else if (imaginaryDecimalOrFraction === '/') {
       let gcd = utils.gcd(realNumerator, realRest);
       if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator / gcd, imaginaryRest / gcd);
