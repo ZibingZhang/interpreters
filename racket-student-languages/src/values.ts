@@ -198,6 +198,15 @@ export function isNumber(object: any): object is RacketNumber {
 
 //
 
+export enum RacketValueType {
+  BUILTIN = 1,
+  FUNCTION,
+  NUMBER,
+  VARIABLE
+}
+
+//
+
 function isReal(number: RacketNumber): number is RacketRealNumber {
   return number instanceof RacketExactNumber
     || number instanceof RacketInexactFloat

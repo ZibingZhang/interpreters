@@ -1,15 +1,16 @@
 import * as builtins from './builtins.js';
 import { Environment } from './environment.js';
 import { BuiltinTypeError } from './errors.js';
-import * as ast from './ast.js';
+import * as ir2 from './ir2.js';
 import racket from './racket.js';
 import { 
   isFunction, 
   isNumber,
+  RacketInexactFloat,
   RacketValue 
 } from './values.js';
 
-class Interpreter implements ast.ExprVisitor {
+class Interpreter implements ir2.ExprVisitor {
   private static InterpreterError = class extends Error {
     msg: string;
 
@@ -19,58 +20,43 @@ class Interpreter implements ast.ExprVisitor {
     }
   }
 
-  private environment: Environment = new Environment();
+  environment: Environment = new Environment();
 
   constructor() {
     const GLOBALS = new Environment();
     GLOBALS.define('+', new builtins.SymPlus());
+    GLOBALS.define('e', new RacketInexactFloat(2.718281828459045));
     this.environment = GLOBALS;
   }
 
-  visitCall(expr: ast.Call): RacketValue {
-    if (expr.callee === undefined) throw new Interpreter.InterpreterError("function call: expected a function after the open parenthesis, but nothing's there");
+  visitCall(expr: ir2.Call): RacketValue {
     let callee = this.evaluate(expr.callee);
-    if (isNumber(callee)) throw new Interpreter.InterpreterError('function call: expected a function after the open parenthesis, but found a number');
-    if (!isFunction(callee)) throw new Error('Unreachable code.');
+    if (isNumber(callee)) throw new Interpreter.InterpreterError(`function call: expected a function after the open parenthesis, but received ${callee.toString()}`);
+    else if (!isFunction(callee)) throw new Error('Unreachable code.');
     let args = expr.arguments.map(this.evaluate.bind(this));
     return callee.call(args);
   }
 
-  visitDefineKeyword(expr: ast.DefineKeyword): void {
-    expr;
-    throw new Interpreter.InterpreterError('define: expected an open parenthesis before define, but found none');
+  visitDefineVariable(expr: ir2.DefineVariable): void {
+    let name = expr.identifier.name.lexeme;
+    let value = this.evaluate(expr.expression);
+    this.environment.define(name, value);
+    return;
   }
 
-  visitDefineVariable(expr: ast.DefineVariable): void {
-    let args = expr.arguments;
-    if (args.length === 0) throw new Interpreter.InterpreterError("define: expected a variable name, or a function name and its variables (in parentheses), but nothing's there");
-    if (args[0] instanceof ast.Identifier) {
-      let name = (args[0] as ast.Identifier).name.lexeme;
-      if (this.environment.contains(name)) throw new Interpreter.InterpreterError(`${name}: this name was defined previously and cannot be re-defined`);
-      if (args.length === 1) throw new Interpreter.InterpreterError(`define: expected an expression after the variable name ${name}, but nothing's there`);
-      if (args.length > 2) throw new Interpreter.InterpreterError(`define: expected only one expression after the variable name ${name}, but found ${args.length - 2} extra part${args.length - 2 === 1 ? '' : 's'}`);
-      let value = this.evaluate(args[1]);
-      this.environment.define(name, value);
-    } else {
-      let value = this.evaluate(args[0]);
-      if (isNumber(value)) throw new Interpreter.InterpreterError('define: expected a variable name, or a function name and its variables (in parentheses), but found a number');
-      throw new Error('Unreachable code.')
-    }
-  }
-
-  visitIdentifier(expr: ast.Identifier): RacketValue {
+  visitIdentifier(expr: ir2.Identifier): RacketValue {
     let value = this.environment.get(expr.name.lexeme);
     if (value === undefined) throw new Interpreter.InterpreterError(`${expr.name.lexeme}: this variable is not defined`);
     return value;
   }
 
-  visitLiteral(expr: ast.Literal): RacketValue {
+  visitLiteral(expr: ir2.Literal): RacketValue {
     return expr.value;
   }
 
   //
 
-  interpret(exprs: ast.Expr[]): RacketValue[] {
+  interpret(exprs: ir2.Expr[]): RacketValue[] {
     let values: RacketValue[] = [];
     try {
       for (let expr of exprs) {
@@ -96,7 +82,7 @@ class Interpreter implements ast.ExprVisitor {
     racket.error(msg);
   }
 
-  private evaluate(expr: ast.Expr): RacketValue {
+  private evaluate(expr: ir2.Expr): RacketValue {
     return expr.accept(this);
   }
 }

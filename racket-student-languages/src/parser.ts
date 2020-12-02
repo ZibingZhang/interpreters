@@ -1,9 +1,15 @@
-import * as ast from './ast.js';
+import * as ir1 from './ir1.js';
 import { Token, TokenType } from './tokens.js';
 import racket from './racket.js';
+import { 
+  SExpr,
+  SExprList,
+  SExprNumber,
+  SExprSymbol
+} from './sexpr.js';
 
-class Parser {
-  private static ParserError = class extends Error {
+class TokenParser {
+  private static TokenParserError = class extends Error {
     msg: string;
 
     constructor(msg: string) {
@@ -15,24 +21,23 @@ class Parser {
   current: number = 0;
   tokens: Token[] = [];
 
-  parse(tokens: Token[]): ast.Expr[] {
+  parse(tokens: Token[]): SExpr[] {
     this.current = 0;
     this.tokens = tokens;
-    let exprs: ast.Expr[] = [];
+    let sexprs: SExpr[] = [];
 
     try {
       while (!this.isAtEnd()) {
-        exprs.push(this.expr());
+        sexprs.push(this.expr());
       }
     } catch (err) {
-      if (err instanceof Parser.ParserError) {
+      if (err instanceof TokenParser.TokenParserError) {
         this.error(err.msg);
       } else {
         throw err;
       }
     }
-
-    return exprs;
+    return sexprs;
   }
 
   //
@@ -43,60 +48,38 @@ class Parser {
 
   //
 
-  private expr(): ast.Expr {
+  private expr(): SExpr {
     if (this.match(TokenType.DEFINE)) {
-      return new ast.DefineKeyword();
+      return this.symbol();
     } else if (this.match(TokenType.IDENTIFIER)) {
-      return this.identifier();
+      return this.symbol();
     } else if (this.match(TokenType.NUMBER)) {
       return this.number();
     } else if (this.match(TokenType.LEFT_PAREN)) {
-      return this.group();
+      return this.list();
     } else if (this.match(TokenType.RIGHT_PAREN)) {
-      throw new Parser.ParserError('unexpected `)`');
+      throw new TokenParser.TokenParserError('unexpected `)`');
     } else {
       throw new Error('Unreachable code.');
     }
   }
 
-  private call(): ast.Call {
-    let args: ast.Expr[] = [];
+  private list(): SExprList {
+    let elements: SExpr[] = [];
     while (this.peek().type !== TokenType.RIGHT_PAREN) {
-      if (this.isAtEnd()) throw new Parser.ParserError('expected a `)` to close `(`');
-      args.push(this.expr())
+      if (this.isAtEnd()) throw new TokenParser.TokenParserError('expected a `)` to close `(`');
+      elements.push(this.expr());
     }
     this.advance();
-    let call;
-    if (args.length === 0) call = new ast.Call(undefined, []);
-    else call = new ast.Call(args[0], args.splice(1));
-    return call;
+    return new SExprList(elements);
   }
 
-  private defineVariable(): ast.DefineVariable {
-    let args: ast.Expr[] = [];
-    this.advance();
-    while (this.peek().type !== TokenType.RIGHT_PAREN) {
-      if (this.isAtEnd()) throw new Parser.ParserError('expected a `)` to close `(`');
-      args.push(this.expr());
-    }
-    this.advance();
-    return new ast.DefineVariable(args);
+  private symbol(): SExprSymbol {
+    return new SExprSymbol(this.previous());
   }
 
-  private group(): ast.Call | ast.DefineVariable {
-    if (this.peek().type === TokenType.DEFINE) return this.defineVariable();
-    else return this.call();
-  }
-
-  private identifier(): ast.Identifier {
-    let token = this.previous();
-    return new ast.Identifier(token)
-  }
-
-  private number(): ast.Literal {
-    let value = this.previous().value;
-    if (value === undefined) throw Error('Unreachable code.');
-    return new ast.Literal(value);
+  private number(): SExprNumber {
+    return new SExprNumber(this.previous());
   }
 
   //
@@ -111,11 +94,6 @@ class Parser {
     if (this.isAtEnd()) return false;
     return this.peek().type === type;
   }
-
-  // private consume(type: TokenType, msg: string): void {
-  //   if (this.peek().type !== type) throw new Parser.ParserError(msg);
-  //   this.advance();
-  // }
 
   private isAtEnd(): boolean {
     return this.peek().type === TokenType.EOF;
@@ -135,6 +113,54 @@ class Parser {
 
   private previous(): Token {
     return this.tokens[this.current - 1];
+  }
+}
+
+class Parser {
+  tokenParser: TokenParser = new TokenParser();
+
+  parse(tokens: Token[]): ir1.Expr[] {
+    let sexprs = this.tokenParser.parse(tokens);
+
+    let exprs: ir1.Expr[] = [];
+    for (let sexpr of sexprs) {
+      exprs.push(this.expr(sexpr));
+    }
+    return exprs;
+  }
+
+  //
+
+  private expr(sexpr: SExpr): ir1.Expr {
+    if (sexpr instanceof SExprList) {
+      return this.list(sexpr);
+    } else if (sexpr instanceof SExprNumber) {
+      return this.number(sexpr);
+    } else if (sexpr instanceof SExprSymbol) {
+      return this.symbol(sexpr);
+    } else {
+      throw new Error('Unreachable code.');
+    }
+  }
+
+  private list(sexpr: SExprList): ir1.Call | ir1.DefineVariable {
+    let elements = sexpr.elements;
+    if (elements.length === 0) return new ir1.Call(undefined, []);
+    let callee = elements[0];
+    if (callee instanceof SExprSymbol && callee.token.type === TokenType.DEFINE)
+      return new ir1.DefineVariable(elements.splice(1).map(this.expr.bind(this)));
+    return new ir1.Call(this.expr(callee), elements.splice(1).map(this.expr.bind(this)));
+
+  }
+
+  private number(sexpr: SExprNumber): ir1.Literal {
+    if (sexpr.token.value === undefined) throw new Error('Unreachable code.');
+    return new ir1.Literal(sexpr.token.value);
+  }
+
+  private symbol(sexpr: SExprSymbol): ir1.DefineKeyword | ir1.Identifier {
+    if (sexpr.token.type === TokenType.DEFINE) return new ir1.DefineKeyword();
+    return new ir1.Identifier(sexpr.token);
   }
 }
 

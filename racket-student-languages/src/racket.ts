@@ -1,5 +1,6 @@
 import interpreter from './interpreter.js';
 import parser from './parser.js';
+import resolver from './resolver.js';
 import scanner from './scanner.js';
 
 class Racket {
@@ -11,11 +12,15 @@ class Racket {
 
     if (this.hasError) { this.report(); return; }
 
-    let exprs = parser.parse(tokens);
+    let ir1Exprs = parser.parse(tokens);
 
     if (this.hasError) { this.report(); return; }
+
+    let ir2Exprs = resolver.resolve(ir1Exprs);
     
-    let values = interpreter.interpret(exprs);
+    if (this.hasError) { this.report(); return; }
+    
+    let values = interpreter.interpret(ir2Exprs);
 
     if (this.hasError) { this.report(); return; }
 
