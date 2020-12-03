@@ -1,3 +1,7 @@
+import { Environment } from './environment.js';
+import * as ir2 from './ir2.js';
+import racket from './racket.js';
+import { Token } from './tokens.js';
 import * as utils from './utils.js';
 
 export interface RacketValue {}
@@ -175,9 +179,36 @@ export class RacketComplexNumber implements RacketNumber {
   }
 }
 
-export interface RacketFunction extends RacketValue {
-  name: string;
+export interface RacketCallable extends RacketValue {
   call(args: RacketValue[]): RacketValue;
+}
+
+export class RacketLambda implements RacketCallable {
+  params: Token[];
+  body: ir2.Expr;
+
+  constructor(params: Token[], body: ir2.Expr) {
+    this.params = params;
+    this.body = body;
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    let interpreter = racket.interpreter;
+    let enclosing = interpreter.environment;
+    interpreter.environment = new Environment(enclosing);
+    for (let i = 0; i < args.length; i++) {
+      let param = this.params[i];
+      let arg = args[i];
+      interpreter.environment.define(param.lexeme, arg);
+    }
+    let result = interpreter.evaluate(this.body);
+    interpreter.environment = enclosing;
+    return result;
+  }
+}
+
+export interface RacketFunction extends RacketCallable {
+  name: string;
 }
 
 export interface RacketBuiltInFunction extends RacketFunction {
@@ -185,11 +216,25 @@ export interface RacketBuiltInFunction extends RacketFunction {
   max: number;
 }
 
+export class RacketUserDefinedFunction implements RacketFunction {
+  name: string;
+  body: RacketLambda;
+
+  constructor(name: string, body: RacketLambda) {
+    this.name = name;
+    this.body = body;
+  }
+
+  call(args: RacketValue[]): RacketValue {
+
+    return this.body.call(args);
+  }
+}
+
 //
 
-export function isFunction(object: any): object is RacketFunction {
-  return (object as RacketFunction).name !== undefined
-    && (object as RacketFunction).call !== undefined;
+export function isCallable(object: any): object is RacketFunction {
+  return (object as RacketFunction).call !== undefined;
 }
 
 export function isNumber(object: any): object is RacketNumber {
@@ -199,9 +244,11 @@ export function isNumber(object: any): object is RacketNumber {
 //
 
 export enum RacketValueType {
-  BUILTIN = 1,
+  BUILTIN_FUNCTION = 1,
+  BUILTIN_LITERAL,
   FUNCTION,
   NUMBER,
+  PARAMETER,
   VARIABLE
 }
 

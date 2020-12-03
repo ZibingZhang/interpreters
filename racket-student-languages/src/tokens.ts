@@ -4,6 +4,7 @@ export enum TokenType {
   LEFT_PAREN = '(',
   RIGHT_PAREN = ')',
   DEFINE = 'DEFINE',
+  LAMBDA = 'LAMBDA',
   IDENTIFIER = 'IDENTIFIER',
   NUMBER = 'NUMBER',
   EOF = 'EOF'
@@ -24,3 +25,8 @@ export class Token {
     return `<Token type:${this.type.toString()} lexeme:${this.lexeme}${this.value ? ' value:' + this.value.toString() : ''}>`;
   }
 }
+
+export const KEYWORDS = new Map([
+  ['define', TokenType.DEFINE],
+  ['lambda', TokenType.LAMBDA]
+]);;

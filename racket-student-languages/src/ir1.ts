@@ -6,25 +6,11 @@ export interface Expr {
 }
 
 export interface ExprVisitor {
-  visitCall(expr: Call): any;
   visitDefineKeyword(expr: DefineKeyword): any;
-  visitDefineVariable(expr: DefineVariable): any;
-  visitLiteral(expr: Literal): any;
+  visitGroup(expr: Group): any;
   visitIdentifier(expr: Identifier): any;
-}
-
-export class Call implements Expr {
-  callee: Expr | undefined;
-  arguments: Expr[];
-
-  constructor(callee: Expr | undefined, args: Expr[]) {
-    this.callee = callee;
-    this.arguments = args;
-  }
-
-  accept(visitor: ExprVisitor): any {
-    return visitor.visitCall(this);
-  }
+  visitLambdaKeyword(expr: LambdaKeyword): any;
+  visitLiteral(expr: Literal): any;
 }
 
 export class DefineKeyword implements Expr {
@@ -33,20 +19,20 @@ export class DefineKeyword implements Expr {
   }
 }
 
-export class DefineVariable implements Expr {
-  arguments: Expr[];
+export class Group implements Expr {
+  elements: Expr[];
 
-  constructor(args: Expr[]) { 
-    this.arguments = args;
-   }
+  constructor(elements: Expr[]) {
+    this.elements = elements;
+  }
 
   accept(visitor: ExprVisitor): any {
-    return visitor.visitDefineVariable(this);
+    return visitor.visitGroup(this);
   }
 }
 
 export class Identifier implements Expr {
-  name: Token
+  name: Token;
 
   constructor(name: Token) {
     this.name = name;
@@ -54,6 +40,12 @@ export class Identifier implements Expr {
 
   accept(visitor: ExprVisitor): any {
     return visitor.visitIdentifier(this);
+  }
+}
+
+export class LambdaKeyword implements Expr {
+  accept(visitor: ExprVisitor): any {
+    return visitor.visitLambdaKeyword(this);
   }
 }
 

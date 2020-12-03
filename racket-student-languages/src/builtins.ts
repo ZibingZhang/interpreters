@@ -1,6 +1,6 @@
 import { BuiltinTypeError } from './errors.js';
 import {
-  isFunction,
+  isCallable,
   isNumber,
   RacketBuiltInFunction, 
   RacketExactNumber, 
@@ -22,7 +22,7 @@ export class SymPlus implements RacketBuiltInFunction {
   call(args: RacketValue[]): RacketNumber {
     let total: RacketNumber = new RacketExactNumber(0n, 1n);
     for (let arg of args) {
-      if (isFunction(arg)) throw new BuiltinTypeError(`${arg.name}: expected a function call, but there is no open parenthesis before this function`);
+      if (isCallable(arg)) throw new BuiltinTypeError(`${arg.name}: expected a function call, but there is no open parenthesis before this function`);
       if (!isNumber(arg)) throw new Error('Unreachable code.');
       total = total.add(arg);
     }

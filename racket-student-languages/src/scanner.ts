@@ -7,7 +7,7 @@ import {
   RacketNumber,
   RacketRealNumber
 } from './values.js';
-import { Token, TokenType } from './tokens.js'
+import { KEYWORDS, Token, TokenType } from './tokens.js'
 import * as utils from './utils.js';
 import racket from './racket.js';
 
@@ -77,7 +77,8 @@ class Scanner {
   }
 
   nameToToken(name: string): Token {
-    if (name === 'define') return new Token(TokenType.DEFINE, name);
+    let type = KEYWORDS.get(name);
+    if (type != undefined) return new Token(type, name);
     let value;
     if (value = this.isNumber(name)) return new Token(TokenType.NUMBER, name, value);
     return new Token(TokenType.IDENTIFIER, name);

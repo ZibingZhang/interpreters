@@ -8,6 +8,7 @@ export interface Expr {
 export interface ExprVisitor {
   visitCall(expr: Call): any;
   visitDefineVariable(expr: DefineVariable): any;
+  visitLambdaExpression(expr: LambdaExpression): any;
   visitLiteral(expr: Literal): any;
   visitIdentifier(expr: Identifier): any;
 }
@@ -49,6 +50,20 @@ export class Identifier implements Expr {
 
   accept(visitor: ExprVisitor): any {
     return visitor.visitIdentifier(this);
+  }
+}
+
+export class LambdaExpression implements Expr {
+  names: Token[];
+  body: Expr;
+
+  constructor(names: Token[], body: Expr) {
+    this.names = names;
+    this.body = body;
+  }
+
+  accept(visitor: ExprVisitor): any {
+    return visitor.visitLambdaExpression(this);
   }
 }
 

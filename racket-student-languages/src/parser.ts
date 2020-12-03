@@ -32,7 +32,7 @@ class TokenParser {
       }
     } catch (err) {
       if (err instanceof TokenParser.TokenParserError) {
-        this.error(err.msg);
+        racket.error(err.msg);
       } else {
         throw err;
       }
@@ -42,16 +42,8 @@ class TokenParser {
 
   //
 
-  private error(msg: string): void {
-    racket.error(`read-syntax: ${msg}`);
-  }
-
-  //
-
   private expr(): SExpr {
-    if (this.match(TokenType.DEFINE)) {
-      return this.symbol();
-    } else if (this.match(TokenType.IDENTIFIER)) {
+    if (this.match(TokenType.DEFINE, TokenType.IDENTIFIER, TokenType.LAMBDA)) {
       return this.symbol();
     } else if (this.match(TokenType.NUMBER)) {
       return this.number();
@@ -99,10 +91,12 @@ class TokenParser {
     return this.peek().type === TokenType.EOF;
   }
 
-  private match(type: TokenType): boolean {
-    if (this.check(type)) {
-      this.advance();
-      return true;
+  private match(...types: TokenType[]): boolean {
+    for (let type of types) {
+      if (this.check(type)) {
+        this.advance();
+        return true;
+      }
     }
     return false;
   }
@@ -133,7 +127,7 @@ class Parser {
 
   private expr(sexpr: SExpr): ir1.Expr {
     if (sexpr instanceof SExprList) {
-      return this.list(sexpr);
+      return this.group(sexpr);
     } else if (sexpr instanceof SExprNumber) {
       return this.number(sexpr);
     } else if (sexpr instanceof SExprSymbol) {
@@ -143,14 +137,10 @@ class Parser {
     }
   }
 
-  private list(sexpr: SExprList): ir1.Call | ir1.DefineVariable {
+  private group(sexpr: SExprList): ir1.Group {
     let elements = sexpr.elements;
-    if (elements.length === 0) return new ir1.Call(undefined, []);
-    let callee = elements[0];
-    if (callee instanceof SExprSymbol && callee.token.type === TokenType.DEFINE)
-      return new ir1.DefineVariable(elements.splice(1).map(this.expr.bind(this)));
-    return new ir1.Call(this.expr(callee), elements.splice(1).map(this.expr.bind(this)));
-
+    if (elements.length === 0) return new ir1.Group([]);
+    return new ir1.Group(elements.map(this.expr.bind(this)));
   }
 
   private number(sexpr: SExprNumber): ir1.Literal {
@@ -158,9 +148,14 @@ class Parser {
     return new ir1.Literal(sexpr.token.value);
   }
 
-  private symbol(sexpr: SExprSymbol): ir1.DefineKeyword | ir1.Identifier {
-    if (sexpr.token.type === TokenType.DEFINE) return new ir1.DefineKeyword();
-    return new ir1.Identifier(sexpr.token);
+  private symbol(sexpr: SExprSymbol): ir1.DefineKeyword | ir1.Identifier | ir1.LambdaKeyword {
+    if (sexpr.token.type === TokenType.DEFINE) {
+      return new ir1.DefineKeyword();
+    } else if (sexpr.token.type === TokenType.LAMBDA) {
+      return new ir1.LambdaKeyword();
+    } else {
+      return new ir1.Identifier(sexpr.token);
+    }
   }
 }
 
