@@ -3,10 +3,13 @@ import { RacketValue } from './values.js';
 export enum TokenType {
   LEFT_PAREN = '(',
   RIGHT_PAREN = ')',
+
   DEFINE = 'DEFINE',
   LAMBDA = 'LAMBDA',
+
   IDENTIFIER = 'IDENTIFIER',
   NUMBER = 'NUMBER',
+  
   EOF = 'EOF'
 }
 

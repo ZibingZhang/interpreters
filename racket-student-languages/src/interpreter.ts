@@ -1,12 +1,11 @@
-import * as builtins from './builtins.js';
+import BUILT_INS from './builtins.js';
 import { Environment } from './environment.js';
-import { BuiltinTypeError } from './errors.js';
+import { BuiltinFunctionError } from './errors.js';
 import * as ir2 from './ir2.js';
 import racket from './racket.js';
 import { 
   isCallable, 
   isNumber,
-  RacketInexactFloat,
   RacketLambda,
   RacketValue 
 } from './values.js';
@@ -22,15 +21,22 @@ export default class Interpreter implements ir2.ExprVisitor {
   }
 
   environment: Environment = new Environment();
+  private evaluatingCallee: boolean = false;
 
   constructor() {
-    this.initGlobals();
+    const GLOBALS = new Environment();
+    for (let [name, value] of BUILT_INS) {
+      GLOBALS.define(name, value);
+    }
+    this.environment = GLOBALS;
   }
 
   visitCall(expr: ir2.Call): RacketValue {
+    this.evaluatingCallee = true;
     let callee = this.evaluate(expr.callee);
+    this.evaluatingCallee = false;
     if (isNumber(callee)) {
-      throw new Interpreter.InterpreterError(`function call: expected a function after the open parenthesis, but received ${callee.toString()}`);
+      this.error(`function call: expected a function after the open parenthesis, but received ${callee.toString()}`);
     } else if (!isCallable(callee)) {
       throw new Error('Unreachable code.');
     }
@@ -52,7 +58,9 @@ export default class Interpreter implements ir2.ExprVisitor {
   visitIdentifier(expr: ir2.Identifier): RacketValue {
     let value = this.environment.get(expr.name.lexeme);
     if (value === undefined) {
-      throw new Interpreter.InterpreterError(`${expr.name.lexeme}: this variable is not defined`);
+      this.error(`${expr.name.lexeme}: this variable is not defined`);
+    } else if (isCallable(value) && !this.evaluatingCallee) {
+      this.error(`${expr.name.lexeme}: expected a function call, but there is no open parenthesis before this function`);
     } else {
       return value;
     }
@@ -64,15 +72,12 @@ export default class Interpreter implements ir2.ExprVisitor {
 
   //
 
-  evaluate(expr: ir2.Expr): RacketValue {
-    return expr.accept(this);
+  error(msg: string): never {
+    throw new Interpreter.InterpreterError(msg);
   }
 
-  initGlobals(): void {
-    const GLOBALS = new Environment();
-    GLOBALS.define('+', new builtins.SymPlus());
-    GLOBALS.define('e', new RacketInexactFloat(2.718281828459045));
-    this.environment = GLOBALS;
+  evaluate(expr: ir2.Expr): RacketValue {
+    return expr.accept(this);
   }
 
   interpret(exprs: ir2.Expr[]): RacketValue[] {
@@ -86,7 +91,7 @@ export default class Interpreter implements ir2.ExprVisitor {
     } catch (err) {
       if (err instanceof Interpreter.InterpreterError) {
         racket.error(err.msg);
-      } else if (err instanceof BuiltinTypeError) {
+      } else if (err instanceof BuiltinFunctionError) {
         racket.error(err.msg);
       } else {
         throw err;

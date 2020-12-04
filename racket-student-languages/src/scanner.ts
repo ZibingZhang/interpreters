@@ -97,25 +97,39 @@ class Scanner {
     if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
     if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
 
-    let match = /^(#i|#e)?(\+|-)?(\d+#*)?(?:(\/|\.)(\d+#*)?)?(?:(\+|-)(\d+#*)?(?:(\/|\.)(\d+#*)?)?i)?$/.exec(text);
+    let result;
+    if (/^(?:#e|#i)$/.exec(text) !== null) {
+      this.error('no digits');
+    } else if ((result = /^(?:#e|#i)(?!\d|\+|-)(.).*/.exec(text)) !== null) {
+      this.error(`bad digit \`${result[1]}\``);
+    } else if (false) {
+      // many more errors to check...
+    }
+
+    let match = /^(#e|#i)?(\+|-)?(\d+#*)?(?:(\/|\.)(\d+#*)?)?(?:(\+|-)(\d+#*)?(?:(\/|\.)(\d+#*)?)?i)?$/.exec(text);
     if (match === null) return false;
     
     let isExact = match[1] !== '#i';
-    let realSignStr = match[2];
+    let realSignStr: string | undefined = match[2];
     let realNumerator = BigInt(match[3]?.replace(/#/g, '0') || -1n);
     let realDecimalOrFraction: string | undefined = match[4];
     let realRest = BigInt(match[5]?.replace(/#/g, '0') || -1n);
-    let imaginarySignStr = match[6];
+    let imaginarySignStr: string | undefined = match[6];
     let imaginaryNumerator = BigInt(match[7]?.replace(/#/g, '0') || -1n);
     let imaginaryDecimalOrFraction: string | undefined = match[8];
     let imaginaryRest = BigInt(match[9]?.replace(/#/g, '0') || -1n);
+    let hasImaginary = imaginarySignStr !== undefined;
 
     if (realSignStr !== undefined && realNumerator === -1n && realRest === -1n) return false;
     if (realDecimalOrFraction !== undefined && realNumerator === -1n && realRest === -1n) return false;
     if (realDecimalOrFraction === '/' && (realNumerator === -1n || realRest === -1n)) return false;
-    if (imaginarySignStr !== undefined && imaginaryNumerator === -1n && imaginaryRest === -1n) return false;
+    if (hasImaginary && imaginaryDecimalOrFraction !== undefined && imaginaryNumerator === -1n && imaginaryRest === -1n) return false;
     if (imaginaryDecimalOrFraction !== undefined && imaginaryNumerator === -1n && imaginaryRest === -1n) return false;
     if (imaginaryDecimalOrFraction === '/' && (imaginaryNumerator === -1n || imaginaryRest === -1n)) return false;
+
+    if (realNumerator === -1n) {
+      realNumerator = 0n;
+    }
 
     let realSign = realSignStr !== '-' ? 1n : -1n;
     let imaginarySign = imaginarySignStr !== '-' ? 1n : -1n;
@@ -140,7 +154,11 @@ class Scanner {
       throw new Error('Unreachable code.');
     }
 
-    if (imaginarySignStr === undefined) return real;
+    if (!hasImaginary) return real;
+
+    if (imaginaryNumerator === -1n && imaginaryRest === -1n) {
+      imaginaryNumerator = 1n;
+    }
 
     if (imaginaryDecimalOrFraction === undefined) {
       if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator, 1n);

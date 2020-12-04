@@ -1,4 +1,4 @@
-import { BuiltinTypeError } from './errors.js';
+import BUILT_INS from './builtins.js';
 import * as ir1 from './ir1.js';
 import * as ir2 from './ir2.js';
 import racket from './racket.js';
@@ -6,6 +6,7 @@ import { SymbolTable } from './symboltable.js';
 import { KEYWORDS, Token } from './tokens.js';
 import { 
   isNumber,
+  RacketBuiltInFunction,
   RacketValueType
 } from './values.js';
 
@@ -19,14 +20,20 @@ export default class Resolver implements ir1.ExprVisitor {
     }
   }
 
-  private readonly BUILTINS: SymbolTable = new SymbolTable();
+  private readonly BUILT_INS: SymbolTable = new SymbolTable();
   private symbolTable: SymbolTable = new SymbolTable();
-
-  private inFunDef: boolean = false;
+  private inFunctionDefinition: boolean = false;
 
   constructor() {
-    this.BUILTINS.define('+', RacketValueType.BUILTIN_LITERAL);
-    this.BUILTINS.define('e', RacketValueType.BUILTIN_FUNCTION);
+    for (let [name, value] of BUILT_INS) {
+      if (isNumber(value)) {
+        this.BUILT_INS.define(name, RacketValueType.BUILTIN_LITERAL);
+      } else if (value instanceof RacketBuiltInFunction) {
+        this.BUILT_INS.define(name, RacketValueType.BUILTIN_LITERAL);
+      } else {
+        throw new Error('Unreachable code.');
+      }
+    }
   }
 
   visitDefineKeyword(expr: ir1.DefineKeyword): never {
@@ -43,9 +50,9 @@ export default class Resolver implements ir1.ExprVisitor {
     let args = [...elements].splice(1);
 
     if (callee instanceof ir1.DefineKeyword) {
-      this.inFunDef = true;
+      this.inFunctionDefinition = true;
       let result = this.define(args);
-      this.inFunDef = false;
+      this.inFunctionDefinition = false;
       return result;
     } else if (callee instanceof ir1.LambdaKeyword) {
       let enclosing = this.symbolTable;
@@ -63,7 +70,7 @@ export default class Resolver implements ir1.ExprVisitor {
       this.error("function call: expected a function after the open parenthesis, but found a part");
     } else if (callee instanceof ir1.Identifier) {
       let name = callee.name.lexeme;
-      let type = this.BUILTINS.get(name) || this.symbolTable.get(name);
+      let type = this.BUILT_INS.get(name) || this.symbolTable.get(name);
       if (type === undefined) { 
         this.error(`${name}: this function is not defined`);
       } else if (type === RacketValueType.NUMBER) {
@@ -77,6 +84,8 @@ export default class Resolver implements ir1.ExprVisitor {
           let errMsg = `${name}: `;
           if (actual > expected) {
             errMsg += `expects only ${expected} argument${expected === 1 ? '' : 's'}, but found ${actual}`;
+          } else if (actual === 0) {
+            errMsg += `expects ${expected} argument${expected === 1 ? '' : 's'}, but found none`;
           } else {
             errMsg += `expects ${expected} argument${expected === 1 ? '' : 's'}, but found only ${actual}`;
           }
@@ -96,7 +105,7 @@ export default class Resolver implements ir1.ExprVisitor {
   }
 
   visitIdentifier(expr: ir1.Identifier): ir2.Identifier {
-    let type = this.BUILTINS.get(expr.name.lexeme) || this.symbolTable.get(expr.name.lexeme);
+    let type = this.BUILT_INS.get(expr.name.lexeme) || this.symbolTable.get(expr.name.lexeme);
     if (type === undefined) {
       this.error(`${expr.name.lexeme}: this variable is not defined`);
     }
@@ -123,8 +132,6 @@ export default class Resolver implements ir1.ExprVisitor {
       }
     } catch (err) {
       if (err instanceof Resolver.ResolverError) {
-        racket.error(err.msg);
-      } else if (err instanceof BuiltinTypeError) {
         racket.error(err.msg);
       } else throw err;
     }
@@ -207,7 +214,7 @@ export default class Resolver implements ir1.ExprVisitor {
       let name = variable.name.lexeme;
       if (KEYWORDS.get(name)) {
         this.error("define: expected a variable name, or a function name and its variables (in parentheses), but found a keyword");
-      } else if (this.BUILTINS.contains(name)) {
+      } else if (this.BUILT_INS.contains(name)) {
         this.error(`${name}: this name was defined in the language or a required library and cannot be re-defined`);
       } else if (this.symbolTable.contains(name)) {
         this.error(`${name}: this name was defined previously and cannot be re-defined`); 
@@ -238,7 +245,7 @@ export default class Resolver implements ir1.ExprVisitor {
   }
 
   private lambdaExpression(exprs: ir1.Expr[]): ir2.LambdaExpression {
-    if (!this.inFunDef) {
+    if (!this.inFunctionDefinition) {
       this.error('lambda: found a lambda that is not a function definition');
     } else if (exprs.length === 0) {
       this.error("lambda: expected (lambda (variable more-variable ...) expression), but nothing's there");
