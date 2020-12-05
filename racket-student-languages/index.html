@@ -32,10 +32,18 @@
 
 <body>
   <div id='code' contenteditable='true'>
-		<!-- (define-struct coord (x y)) -->
+		(define-struct coord (x y))
 		(define g (lambda (y) (* y y)))
 		(define (f x) (* x x))
 		(define i +i)
+
+		(define coord1 (make-coord 4 #f))
+		(coord-x coord1)
+		(coord-y coord1)
+
+		(g #i-i)
+		(g #i-i)
+		(+ i -i)
 	</div>
 	<button id='run'>Run</button>
 	<script type='module' src='/dist/main.js'></script>
