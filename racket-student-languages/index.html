@@ -21,12 +21,18 @@
 
 	<!-- Fonts -->
 	<!-- CSS -->
+	<style>
+		#code {
+			border: 1pt black solid;
+			white-space: pre;
+		}
+	</style>
 	<!-- JS -->
 </head>
 
 <body>
-  <div id='code'>
-		(+ 1 2 + 1231/322)
+  <div id='code' contenteditable='true'>
 	</div>
+	<button id='run'>Run</button>
 	<script type='module' src='/dist/main.js'></script>
 </body>
