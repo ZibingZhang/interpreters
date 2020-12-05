@@ -1,3 +1,5 @@
+export class UnreachableCode extends Error {}
+
 class RacketError extends Error {}
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
