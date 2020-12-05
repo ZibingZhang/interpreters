@@ -4,10 +4,23 @@ import * as ir2 from './ir2.js';
 import racket from './racket.js';
 import * as utils from './utils.js';
 
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Interfaces
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
+
 export interface RacketValue {}
 
-//
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Concrete Classes
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
 
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Booleans
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+ /**
+  * A Racket boolean.
+  */
 export class RacketBoolean implements RacketValue {
   readonly value: boolean;
 
@@ -27,38 +40,80 @@ export class RacketBoolean implements RacketValue {
 export const RACKET_TRUE = new RacketBoolean(true);
 export const RACKET_FALSE = new RacketBoolean(false);
 
-//
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Numbers
+ *
+ * Class Structure:
+ *  RacketNumber
+ *    RacketRealNumber
+ *      RacketExactNumber
+ *      RacketInexactNumber
+ *        RacketInexactFraction
+ *        RacketInexactFloat
+ *    RacketComplexNumber
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
+ /**
+  * A Racket number.
+  */
 export abstract class RacketNumber implements RacketValue {
+  /**
+   * Is this number zero?
+   */
   isZero(): boolean {
     throw new Error('Method not implemented.');
   }
 
+  /**
+   * Return a new Racket number which is equal to the negative of this one.
+   */
   negated(): RacketNumber {
     throw new Error('Method not implemented.');
   }
 
+  /**
+   * Return a new Racket number which is equal to the inverse of this one.
+   */
   inverted(): RacketNumber {
     throw new Error('Method not implemented.');
   }
   
+  /**
+   * Return a new Racket number which is equal to this plus that one.
+   * @param other the number to add with this one
+   */
   add(other: RacketNumber): RacketNumber {
     throw new Error('Method not implemented.');
   }
 
+  /**
+   * Return a new Racket number which is equal to this minus that one.
+   * @param other the number to subtract with this one
+   */
   sub(other: RacketNumber): RacketNumber {
     return this.add(other.negated());
   }
 
+  /**
+   * Return a new Racket number which is equal to this times that one.
+   * @param other the number to multiply with this one
+   */
   mul(other: RacketNumber): RacketNumber {
     throw new Error('Method not implemented.');
   }
 
+  /**
+   * Return a new Racket number which is equal to this divided by that one.
+   * @param other the number to divide this one by
+   */
   div(other: RacketNumber): RacketNumber {
     return this.mul(other.inverted());
   }
 }
 
+/**
+ * A real Racket number.
+ */
 export abstract class RacketRealNumber extends RacketNumber {
   isExact: boolean;
 
@@ -84,6 +139,9 @@ export abstract class RacketRealNumber extends RacketNumber {
   }
 }
 
+/**
+ * An exact Racket number.
+ */
 export class RacketExactNumber extends RacketRealNumber {
   readonly numerator: bigint;
   readonly denominator: bigint;
@@ -151,8 +209,14 @@ export class RacketExactNumber extends RacketRealNumber {
   }
 }
 
+/**
+ * An inexact Racket number.
+ */
 abstract class RacketInexactNumber extends RacketRealNumber {}
 
+/**
+ * An inexact Racket number which is stored as a fraction.
+ */
 export class RacketInexactFraction extends RacketInexactNumber {
   readonly numerator: bigint;
   readonly denominator: bigint;
@@ -222,6 +286,9 @@ export class RacketInexactFraction extends RacketInexactNumber {
   }
 }
 
+/**
+ * An inexact Racket number which is stored as a float.
+ */
 export class RacketInexactFloat extends RacketInexactNumber {
   readonly value: number;
 
@@ -290,6 +357,9 @@ export class RacketInexactFloat extends RacketInexactNumber {
   }
 }
 
+/**
+ * A complex Racket number.
+ */
 export class RacketComplexNumber extends RacketNumber {
   readonly real: RacketRealNumber;
   readonly imaginary: RacketRealNumber;
@@ -357,8 +427,13 @@ export class RacketComplexNumber extends RacketNumber {
   }
 }
 
-//
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Strings
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
+ /**
+  * A Racket string.
+  */
 export class RacketString implements RacketValue {
   private value: string;
 
@@ -371,9 +446,21 @@ export class RacketString implements RacketValue {
   }
 }
 
-//
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Callables
+ * 
+ * Class Structure:
+ *  RacketCallable
+ *    RacketLambda
+ *    RacketBuiltinFunction
+ *    RacketStructureFunction
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 export interface RacketCallable extends RacketValue {
+  /**
+   * Call this callable.
+   * @param args the arguments passed to this callable
+   */
   call(args: RacketValue[]): RacketValue;
 }
 
@@ -401,11 +488,7 @@ export class RacketLambda implements RacketCallable {
   }
 }
 
-export interface RacketFunction extends RacketCallable {
-  readonly name: string;
-}
-
-export abstract class RacketBuiltInFunction implements RacketFunction {
+export abstract class RacketBuiltInFunction implements RacketCallable {
   readonly name: string;
   readonly min: number;
   readonly max: number;
@@ -420,6 +503,10 @@ export abstract class RacketBuiltInFunction implements RacketFunction {
     throw new Error('Method not implemented.');
   }
 
+  /**
+   * Raise an error.
+   * @param msg the error message
+   */
   error(msg: string): never {
     throw new BuiltinFunctionError(msg);
   }
@@ -434,14 +521,18 @@ class RacketStructureFunction implements RacketCallable {
     this.function = func;
   }
 
-
   call(args: RacketValue[]): RacketValue {
     return this.function(args);
   }
 }
 
-//
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Structures
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
+ /**
+  * A Racket structure.
+  */
 export class RacketStructure implements RacketValue {
   name: string;
   fields: string[];
@@ -451,6 +542,9 @@ export class RacketStructure implements RacketValue {
     this.fields = fields;
   }
 
+  /**
+   * Produce a function that creates an instance of this Racket structure.
+   */
   makeFunction(): RacketStructureFunction {
     return new RacketStructureFunction((args: RacketValue[]): RacketInstance => {
       let functionName = `make-${this.name}`;
@@ -468,6 +562,9 @@ export class RacketStructure implements RacketValue {
     });
   }
 
+  /**
+   * Produce a list of functions that get attributes from instances of this Racket structure.
+   */
   getFunctions() : RacketStructureFunction[] {
     let functions: RacketStructureFunction[] = [];
     this.fields.forEach((field, i) => {
@@ -495,6 +592,9 @@ export class RacketStructure implements RacketValue {
   }
 }
 
+/**
+ * An instance of a Racket structure.
+ */
 export class RacketInstance implements RacketValue {
   type: RacketStructure;
   values: RacketValue[];
@@ -513,10 +613,12 @@ export class RacketInstance implements RacketValue {
   }
 }
 
-//
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Type Guards
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-export function isCallable(object: any): object is RacketFunction {
-  return (object as RacketFunction).call !== undefined;
+export function isCallable(object: any): object is RacketCallable {
+  return (object as RacketCallable).call !== undefined;
 }
 
 export function isBoolean(object: any): object is RacketBoolean {
@@ -539,7 +641,13 @@ export function isStructure(object: any): object is RacketStructure {
   return object instanceof RacketStructure;
 }
 
-//
+function isReal(number: RacketNumber): number is RacketRealNumber {
+  return number instanceof RacketRealNumber;
+}
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Racket Value Types
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 export enum RacketValueType {
   BUILTIN_FUNCTION = 'BUILTIN_FUNCTION',
@@ -554,11 +662,9 @@ export enum RacketValueType {
   VARIABLE = 'VARIABLE'
 }
 
-//
-
-function isReal(number: RacketNumber): number is RacketRealNumber {
-  return number instanceof RacketRealNumber;
-}
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Helper Functions
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 function fractionToFloat(numerator: BigInt, denominator: BigInt): number {
   return Number(numerator) / Number(denominator);

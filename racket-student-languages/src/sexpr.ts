@@ -1,15 +1,33 @@
 import { Token } from "./tokens";
 
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Interfaces
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
+
+/**
+ * An S-expression.
+ */
 export interface SExpr {
   accept(visitor: SExprVisitor): any;
 }
 
+/**
+ * A visitor for S-expressions.
+ */
 export interface SExprVisitor {
   visitSExprList(sexpr: SExprList): any;
   visitSExprLiteral(sexpr: SExprLiteral): any;
   visitSExprSymbol(sexpr: SExprSymbol): any;
 }
 
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Concrete Classes
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
+
+ /**
+  * A list.
+  * @implements SExpr
+  */
 export class SExprList implements SExpr {
   readonly elements: SExpr[];
 
@@ -28,6 +46,10 @@ export class SExprList implements SExpr {
   }
 }
 
+/**
+ * A literal value, i.e. boolean, number, string.
+ * @implements SExpr
+ */
 export class SExprLiteral implements SExpr {
   readonly token: Token;
   
@@ -46,6 +68,10 @@ export class SExprLiteral implements SExpr {
   }
 }
 
+/**
+ * A symbol.
+ * @implements SExpr
+ */
 export class SExprSymbol implements SExpr {
   readonly token: Token;
 

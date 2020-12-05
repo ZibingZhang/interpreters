@@ -1,10 +1,20 @@
 import { RacketValue } from './values.js';
 import { Token } from './tokens.js'
 
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Interfaces
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
+
+ /**
+  * An expression, but more refined.
+  */
 export interface Expr {
   accept(visitor: ExprVisitor): any;
 }
 
+/**
+ * A visitor for the Expr interface.
+ */
 export interface ExprVisitor {
   visitCall(expr: Call): any;
   visitDefineStructure(expr: DefineStructure): any;
@@ -14,6 +24,14 @@ export interface ExprVisitor {
   visitIdentifier(expr: Identifier): any;
 }
 
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Concrete Classes
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
+
+ /**
+  * A function call.
+  * @implements Expr
+  */
 export class Call implements Expr {
   readonly callee: Expr;
   readonly arguments: Expr[];
@@ -28,6 +46,10 @@ export class Call implements Expr {
   }
 }
 
+/**
+ * A structure definition.
+ * @implements Expr
+ */
 export class DefineStructure implements Expr {
   readonly name: string;
   readonly fields: string[];
@@ -42,6 +64,10 @@ export class DefineStructure implements Expr {
   }
 }
 
+/**
+ * A variable definition.
+ * @implements Expr
+ */
 export class DefineVariable implements Expr {
   readonly identifier: Identifier;
   readonly expression: Expr;
@@ -56,6 +82,10 @@ export class DefineVariable implements Expr {
   }
 }
 
+/**
+ * An identifier.
+ * @implements Expr
+ */
 export class Identifier implements Expr {
   readonly name: Token
 
@@ -68,6 +98,10 @@ export class Identifier implements Expr {
   }
 }
 
+/**
+ * A lambda expression.
+ * @implements Expr
+ */
 export class LambdaExpression implements Expr {
   readonly names: Token[];
   readonly body: Expr;
@@ -82,6 +116,10 @@ export class LambdaExpression implements Expr {
   }
 }
 
+/**
+ * A literal value, i.e. boolean, number, string.
+ * @implements Expr
+ */
 export class Literal implements Expr {
   readonly value: RacketValue;
 

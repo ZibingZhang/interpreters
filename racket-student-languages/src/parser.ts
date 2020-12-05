@@ -8,6 +8,9 @@ import {
   SExprSymbol
 } from './sexpr.js';
 
+/**
+ * A parser for transforming tokens into S-expressions.
+ */
 class TokenParser {
   private static TokenParserError = class extends Error {
     readonly msg: string;
@@ -21,6 +24,10 @@ class TokenParser {
   current: number = 0;
   tokens: Token[] = [];
 
+  /**
+   * Produces an S-expression representation of the tokens.
+   * @param tokens the token representation of the code
+   */
   parse(tokens: Token[]): SExpr[] {
     this.current = 0;
     this.tokens = tokens;
@@ -40,7 +47,9 @@ class TokenParser {
     return sexprs;
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * S-expression Components
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private expr(): SExpr {
     if (this.match(TokenType.DEFINE, TokenType.DEFINE_STRUCT, TokenType.IDENTIFIER, TokenType.LAMBDA)) {
@@ -74,7 +83,9 @@ class TokenParser {
     return new SExprSymbol(this.previous());
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * General Parsing Helper Functions
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private advance(): void {
     if (!this.isAtEnd()) {
@@ -110,9 +121,17 @@ class TokenParser {
   }
 }
 
+/**
+ * A parser for transforming tokens into a slightly more useful intermediate
+ * representations.
+ */
 class Parser {
   tokenParser: TokenParser = new TokenParser();
 
+  /**
+   * Produces an Intermediate Representation I representation of the tokens.
+   * @param tokens the token representation of the code
+   */
   parse(tokens: Token[]): ir1.Expr[] {
     let sexprs = this.tokenParser.parse(tokens);
 
@@ -123,7 +142,9 @@ class Parser {
     return exprs;
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Intermediate Representation I Forms
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private expr(sexpr: SExpr): ir1.Expr {
     if (sexpr instanceof SExprList) {

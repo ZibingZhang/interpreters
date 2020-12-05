@@ -15,7 +15,9 @@ import { KEYWORDS, Token, TokenType } from './tokens.js'
 import * as utils from './utils.js';
 import racket from './racket.js';
 
-
+/**
+ * A scanner for transforming text into tokens.
+ */
 class Scanner {
   private static ScannerError = class extends Error {
     msg: string;
@@ -29,6 +31,10 @@ class Scanner {
   private text: string = '';
   private current: number = 0;
 
+  /**
+   * Produces a tokenized representation of the text.
+   * @param text the text which the tokens will represent
+   */
   scan(text: string): Token[] {
     this.text = text;
     this.current = 0;
@@ -80,7 +86,9 @@ class Scanner {
     return tokens;
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * General Parsing Helper Functions
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private advance(): void {
     if (!this.isAtEnd()) {
@@ -88,24 +96,9 @@ class Scanner {
     }
   }
 
-  // private check(type: TokenType): boolean {
-  //   if (this.isAtEnd()) return false;
-  //   return this.peek().type === type;
-  // }
-
   private isAtEnd(): boolean {
     return this.peek() === false;
   }
-
-  // private match(...types: TokenType[]): boolean {
-  //   for (let type of types) {
-  //     if (this.check(type)) {
-  //       this.advance();
-  //       return true;
-  //     }
-  //   }
-  //   return false;
-  // }
 
   private peek(): string | false {
     if (this.text.length === this.current) {
@@ -119,7 +112,9 @@ class Scanner {
     return this.text[this.current - 1];
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Adding Onto Token List
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private addCurrentName(tokens: Token[], name: string): '' {
     if (name !== '') {
@@ -189,13 +184,17 @@ class Scanner {
     tokens.push(new Token(TokenType.STRING, string, new RacketString(string)));
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Error Reporting
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private error(msg: string): void {
     racket.error(`read-syntax: ${msg}`);
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Variables and Literal Values
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private lexemeToToken(name: string): Token {
     let type = KEYWORDS.get(name);
@@ -206,8 +205,6 @@ class Scanner {
     if (value !== false) return new Token(TokenType.NUMBER, name, value);
     return new Token(TokenType.IDENTIFIER, name);
   }
-
-  //
 
   private isBoolean(text: string): RacketBoolean | false {
     if (['#T', '#t', '#true'].includes(text)) {

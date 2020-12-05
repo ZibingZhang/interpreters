@@ -1,5 +1,8 @@
 import { RacketValue } from './values.js';
 
+/**
+ * The type of a token.
+ */
 export enum TokenType {
   LEFT_PAREN = '(',
   RIGHT_PAREN = ')',
@@ -16,6 +19,9 @@ export enum TokenType {
   EOF = 'EOF'
 }
 
+/**
+ * A abstract representation of a consecutive sequence of characters.
+ */
 export class Token {
   readonly type: TokenType;
   readonly lexeme: string;

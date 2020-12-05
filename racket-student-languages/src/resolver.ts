@@ -1,4 +1,5 @@
 import BUILT_INS from './builtins.js';
+import { ResolverError } from './errors.js';
 import * as ir1 from './ir1.js';
 import * as ir2 from './ir2.js';
 import racket from './racket.js';
@@ -12,16 +13,11 @@ import {
   RacketValueType
 } from './values.js';
 
+/**
+ * Transforms Intermediate Representation Is into Intermediate Representation 
+ * IIs along with a lot of error checking.
+ */
 export default class Resolver implements ir1.ExprVisitor {
-  private static ResolverError = class extends Error {
-    readonly msg: string;
-
-    constructor(msg: string) {
-      super();
-      this.msg = msg;
-    }
-  }
-
   private readonly BUILT_INS: SymbolTable = new SymbolTable();
   private symbolTable: SymbolTable = new SymbolTable();
   private atTopLevel: boolean = true;
@@ -39,6 +35,10 @@ export default class Resolver implements ir1.ExprVisitor {
       }
     }
   }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Visitor
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   visitGroup(expr: ir1.Group): ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.LambdaExpression {
     let elements = expr.elements;
@@ -141,7 +141,9 @@ export default class Resolver implements ir1.ExprVisitor {
     return new ir2.Literal(expr.value);
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Resolving
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   resolve(exprs: ir1.Expr[]): ir2.Expr[] {
     let values: ir2.Expr[] = [];
@@ -152,24 +154,29 @@ export default class Resolver implements ir1.ExprVisitor {
         values.push(value);
       }
     } catch (err) {
-      if (err instanceof Resolver.ResolverError) {
+      if (err instanceof ResolverError) {
         racket.error(err.msg);
       } else throw err;
     }
     return values;
   }
 
-  //
-
-  private error(msg: string): never {
-    throw new Resolver.ResolverError(msg);
-  }
-
   private evaluate(expr: ir1.Expr): ir2.Expr {
     return expr.accept(this);
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Error Reporting
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  private error(msg: string): never {
+    throw new ResolverError(msg);
+  }
+
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Group Sub-Cases
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private define(exprs: ir1.Expr[]): ir2.DefineVariable {
     if (!this.atTopLevel) {
@@ -230,11 +237,11 @@ export default class Resolver implements ir1.ExprVisitor {
         } else throw new Error('Unreachable code.');
       }
       if (exprs.length === 1) {
-        this.symbolTable = enclosing;
         let atTopLevel = this.atTopLevel;
         this.atTopLevel = false;
         let body = this.evaluate(exprs[0])
         this.atTopLevel = atTopLevel;
+        this.symbolTable = enclosing;
         this.symbolTable.define(variable.name.lexeme, RacketValueType.FUNCTION, paramNames.length);
         return new ir2.DefineVariable(new ir2.Identifier(variable.name), new ir2.LambdaExpression(paramNames, body));
       } else if (exprs.length < 1) {

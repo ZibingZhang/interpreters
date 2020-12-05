@@ -1,3 +1,8 @@
+/**
+ * Computes the greatest common denominator of two non-negative integers.
+ * @param a first number
+ * @param b second number
+ */
 export function gcd(a: bigint, b: bigint): bigint {
   if (a === b) return a;
   if (a === 0n) return b;

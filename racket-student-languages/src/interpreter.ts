@@ -11,6 +11,9 @@ import {
   RacketValue 
 } from './values.js';
 
+/**
+ * An interpreter for executing Intermediate Representation IIs.
+ */
 export default class Interpreter implements ir2.ExprVisitor {
   private static InterpreterError = class extends Error {
     readonly msg: string;
@@ -30,6 +33,10 @@ export default class Interpreter implements ir2.ExprVisitor {
     }
     this.environment = GLOBALS;
   }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Visitor
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   visitCall(expr: ir2.Call): RacketValue {
     let callee = this.evaluate(expr.callee);
@@ -75,7 +82,9 @@ export default class Interpreter implements ir2.ExprVisitor {
     return expr.value;
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Interpreting
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   evaluate(expr: ir2.Expr): RacketValue {
     return expr.accept(this);
@@ -105,7 +114,9 @@ export default class Interpreter implements ir2.ExprVisitor {
     return values;
   }
 
-  //
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Error Reporting
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private error(msg: string): never {
     throw new Interpreter.InterpreterError(msg);

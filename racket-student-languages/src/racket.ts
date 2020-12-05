@@ -1,9 +1,14 @@
 import Interpreter from './interpreter.js';
+import { Console } from './output.js';
 import parser from './parser.js';
 import Resolver from './resolver.js';
 import scanner from './scanner.js';
 
+/**
+ * Evaluates Racket code.
+ */
 class Racket {
+  private readonly output = new Console();
   private resolver: Resolver = new Resolver();
   interpreter: Interpreter = new Interpreter();
 
@@ -33,14 +38,22 @@ class Racket {
     if (this.report()) return;
 
     for (let value of values) {
-      console.log(value.toString());
+      this.output.display(value.toString());
     }
   }
 
+  /**
+   * Log an error.
+   * @param msg the error message
+   */
   error(msg: string): void {
     this.hasError = true;
     this.errors.push(msg);
   }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Error Reporting
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private report(): boolean {
     if (!this.hasError) return false;
