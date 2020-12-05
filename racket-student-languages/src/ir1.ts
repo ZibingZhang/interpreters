@@ -6,21 +6,14 @@ export interface Expr {
 }
 
 export interface ExprVisitor {
-  visitDefineKeyword(expr: DefineKeyword): any;
   visitGroup(expr: Group): any;
   visitIdentifier(expr: Identifier): any;
-  visitLambdaKeyword(expr: LambdaKeyword): any;
+  visitKeyword(expr: Keyword): any;
   visitLiteral(expr: Literal): any;
 }
 
-export class DefineKeyword implements Expr {
-  accept(visitor: ExprVisitor): any {
-    return visitor.visitDefineKeyword(this);
-  }
-}
-
 export class Group implements Expr {
-  elements: Expr[];
+  readonly elements: Expr[];
 
   constructor(elements: Expr[]) {
     this.elements = elements;
@@ -32,7 +25,7 @@ export class Group implements Expr {
 }
 
 export class Identifier implements Expr {
-  name: Token;
+  readonly name: Token;
 
   constructor(name: Token) {
     this.name = name;
@@ -43,14 +36,20 @@ export class Identifier implements Expr {
   }
 }
 
-export class LambdaKeyword implements Expr {
+export class Keyword implements Expr {
+  token: Token;
+
+  constructor(token: Token) {
+    this.token = token;
+  }
+
   accept(visitor: ExprVisitor): any {
-    return visitor.visitLambdaKeyword(this);
+    return visitor.visitKeyword(this);
   }
 }
 
 export class Literal implements Expr {
-  value: RacketValue;
+  readonly value: RacketValue;
 
   constructor(value: RacketValue) {
     this.value = value;

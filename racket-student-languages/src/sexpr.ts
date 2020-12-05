@@ -6,12 +6,12 @@ export interface SExpr {
 
 export interface SExprVisitor {
   visitSExprList(sexpr: SExprList): any;
-  visitSExprNumber(sexpr: SExprNumber): any;
+  visitSExprLiteral(sexpr: SExprLiteral): any;
   visitSExprSymbol(sexpr: SExprSymbol): any;
 }
 
 export class SExprList implements SExpr {
-  elements: SExpr[];
+  readonly elements: SExpr[];
 
   constructor(elements: SExpr[]) {
     this.elements = elements;
@@ -28,26 +28,26 @@ export class SExprList implements SExpr {
   }
 }
 
-export class SExprNumber implements SExpr {
-  token: Token;
+export class SExprLiteral implements SExpr {
+  readonly token: Token;
   
   constructor(token: Token) {
     this.token = token;
   }
 
   toString(): string {
-    let number = this.token.value;
-    if (number === undefined) throw new Error('Unreachable code.');
-    return number.toString();
+    let value = this.token.value;
+    if (value === undefined) throw new Error('Unreachable code.');
+    return value.toString();
   }
 
   accept(visitor: SExprVisitor): any {
-    return visitor.visitSExprNumber(this);
+    return visitor.visitSExprLiteral(this);
   }
 }
 
 export class SExprSymbol implements SExpr {
-  token: Token;
+  readonly token: Token;
 
   constructor(token: Token) {
     this.token = token;

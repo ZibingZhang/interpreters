@@ -4,19 +4,22 @@ export enum TokenType {
   LEFT_PAREN = '(',
   RIGHT_PAREN = ')',
 
-  DEFINE = 'DEFINE',
-  LAMBDA = 'LAMBDA',
+  DEFINE = 'define',
+  DEFINE_STRUCT = 'define-struct',
+  LAMBDA = 'lambda',
 
+  BOOLEAN = 'BOOLEAN',
   IDENTIFIER = 'IDENTIFIER',
   NUMBER = 'NUMBER',
+  STRING = 'STRING',
   
   EOF = 'EOF'
 }
 
 export class Token {
-  type: TokenType;
-  lexeme: string;
-  value: RacketValue | undefined;
+  readonly type: TokenType;
+  readonly lexeme: string;
+  readonly value: RacketValue | undefined;
 
   constructor(type: TokenType, lexeme: string, value: RacketValue | undefined = undefined) {
     this.type = type;
@@ -31,5 +34,6 @@ export class Token {
 
 export const KEYWORDS = new Map([
   ['define', TokenType.DEFINE],
+  ['define-struct', TokenType.DEFINE_STRUCT],
   ['lambda', TokenType.LAMBDA]
 ]);;

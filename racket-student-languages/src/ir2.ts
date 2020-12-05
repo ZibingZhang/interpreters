@@ -7,6 +7,7 @@ export interface Expr {
 
 export interface ExprVisitor {
   visitCall(expr: Call): any;
+  visitDefineStructure(expr: DefineStructure): any;
   visitDefineVariable(expr: DefineVariable): any;
   visitLambdaExpression(expr: LambdaExpression): any;
   visitLiteral(expr: Literal): any;
@@ -14,8 +15,8 @@ export interface ExprVisitor {
 }
 
 export class Call implements Expr {
-  callee: Expr;
-  arguments: Expr[];
+  readonly callee: Expr;
+  readonly arguments: Expr[];
 
   constructor(callee: Expr, args: Expr[]) {
     this.callee = callee;
@@ -27,9 +28,23 @@ export class Call implements Expr {
   }
 }
 
+export class DefineStructure implements Expr {
+  readonly name: string;
+  readonly fields: string[];
+
+  constructor(name: string, fields: string[]) {
+    this.name = name;
+    this.fields = fields;
+  }
+
+  accept(visitor: ExprVisitor): any {
+    return visitor.visitDefineStructure(this);
+  }
+}
+
 export class DefineVariable implements Expr {
-  identifier: Identifier;
-  expression: Expr;
+  readonly identifier: Identifier;
+  readonly expression: Expr;
 
   constructor(identifier: Identifier, expr: Expr) { 
     this.identifier = identifier;
@@ -42,7 +57,7 @@ export class DefineVariable implements Expr {
 }
 
 export class Identifier implements Expr {
-  name: Token
+  readonly name: Token
 
   constructor(name: Token) {
     this.name = name;
@@ -54,8 +69,8 @@ export class Identifier implements Expr {
 }
 
 export class LambdaExpression implements Expr {
-  names: Token[];
-  body: Expr;
+  readonly names: Token[];
+  readonly body: Expr;
 
   constructor(names: Token[], body: Expr) {
     this.names = names;
@@ -68,7 +83,7 @@ export class LambdaExpression implements Expr {
 }
 
 export class Literal implements Expr {
-  value: RacketValue;
+  readonly value: RacketValue;
 
   constructor(value: RacketValue) {
     this.value = value;

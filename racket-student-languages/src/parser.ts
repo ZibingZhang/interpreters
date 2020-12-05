@@ -4,13 +4,13 @@ import racket from './racket.js';
 import { 
   SExpr,
   SExprList,
-  SExprNumber,
+  SExprLiteral,
   SExprSymbol
 } from './sexpr.js';
 
 class TokenParser {
   private static TokenParserError = class extends Error {
-    msg: string;
+    readonly msg: string;
 
     constructor(msg: string) {
       super();
@@ -43,10 +43,10 @@ class TokenParser {
   //
 
   private expr(): SExpr {
-    if (this.match(TokenType.DEFINE, TokenType.IDENTIFIER, TokenType.LAMBDA)) {
+    if (this.match(TokenType.DEFINE, TokenType.DEFINE_STRUCT, TokenType.IDENTIFIER, TokenType.LAMBDA)) {
       return this.symbol();
-    } else if (this.match(TokenType.NUMBER)) {
-      return this.number();
+    } else if (this.match(TokenType.BOOLEAN, TokenType.NUMBER, TokenType.STRING)) {
+      return this.literal();
     } else if (this.match(TokenType.LEFT_PAREN)) {
       return this.list();
     } else if (this.match(TokenType.RIGHT_PAREN)) {
@@ -66,12 +66,12 @@ class TokenParser {
     return new SExprList(elements);
   }
 
-  private symbol(): SExprSymbol {
-    return new SExprSymbol(this.previous());
+  private literal(): SExprLiteral {
+    return new SExprLiteral(this.previous());
   }
 
-  private number(): SExprNumber {
-    return new SExprNumber(this.previous());
+  private symbol(): SExprSymbol {
+    return new SExprSymbol(this.previous());
   }
 
   //
@@ -128,8 +128,8 @@ class Parser {
   private expr(sexpr: SExpr): ir1.Expr {
     if (sexpr instanceof SExprList) {
       return this.group(sexpr);
-    } else if (sexpr instanceof SExprNumber) {
-      return this.number(sexpr);
+    } else if (sexpr instanceof SExprLiteral) {
+      return this.literal(sexpr);
     } else if (sexpr instanceof SExprSymbol) {
       return this.symbol(sexpr);
     } else {
@@ -143,16 +143,14 @@ class Parser {
     return new ir1.Group(elements.map(this.expr.bind(this)));
   }
 
-  private number(sexpr: SExprNumber): ir1.Literal {
+  private literal(sexpr: SExprLiteral): ir1.Literal {
     if (sexpr.token.value === undefined) throw new Error('Unreachable code.');
     return new ir1.Literal(sexpr.token.value);
   }
 
-  private symbol(sexpr: SExprSymbol): ir1.DefineKeyword | ir1.Identifier | ir1.LambdaKeyword {
-    if (sexpr.token.type === TokenType.DEFINE) {
-      return new ir1.DefineKeyword();
-    } else if (sexpr.token.type === TokenType.LAMBDA) {
-      return new ir1.LambdaKeyword();
+  private symbol(sexpr: SExprSymbol): ir1.Identifier | ir1.Keyword {
+    if ([TokenType.DEFINE, TokenType.DEFINE_STRUCT, TokenType.LAMBDA].includes(sexpr.token.type)) {
+      return new ir1.Keyword(sexpr.token);
     } else {
       return new ir1.Identifier(sexpr.token);
     }

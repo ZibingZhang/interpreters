@@ -11,11 +11,12 @@ import {
 
 class SymPlus extends RacketBuiltInFunction {
   constructor() {
-    super('+', 0, Infinity);
+    super('+', 2, Infinity);
   }
 
   call(args: RacketValue[]): RacketNumber {
     let numbers = assertListOfNumbers(this.name, args);
+    assertAtLeastNArguments(this.name, this.min, args.length);
     let total: RacketNumber = new RacketExactNumber(0n, 1n);
     for (let number of numbers) {
       total = total.add(number);
@@ -31,7 +32,7 @@ class SymDash extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketNumber {
     let numbers = assertListOfNumbers(this.name, args);
-    assertAtLeastOneArgument(this.name, args);
+    assertAtLeastNArguments(this.name, this.min, args.length);
     if (args.length === 1) {
       return numbers[0].negated();
     } else {
@@ -46,7 +47,7 @@ class SymDash extends RacketBuiltInFunction {
 
 class SymStar extends RacketBuiltInFunction {
   constructor() {
-    super('*', 0, Infinity);
+    super('*', 2, Infinity);
   }
 
   call(args: RacketValue[]): RacketNumber {
@@ -66,13 +67,13 @@ class SymSlash extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketNumber {
     let numbers = assertListOfNumbers(this.name, args);
-    assertAtLeastOneArgument(this.name, args);
+    assertAtLeastNArguments(this.name, this.min, args.length);
     if (args.length === 1) {
       return numbers[0].inverted();
     } else {
       let total: RacketNumber = numbers[0];
       for (let i = 1; i < numbers.length; i++) {
-        total.sub(numbers[i]);
+        total.div(numbers[i]);
       }
       return total;
     }
@@ -85,10 +86,18 @@ function error(msg: string): never {
   throw new BuiltinFunctionError(msg);
 }
 
-function assertAtLeastOneArgument(name: string, args: RacketValue[]): void {
-  if (args.length === 0) {
-    error(`${name}: expects at least 1 argument, but found none`);
+function assertAtLeastNArguments(name: string, expected: number, received: number): void {
+  if (expected <= received) {
+    return;
   }
+  let errMsg = `${name}: `;
+  errMsg += `expects at least ${expected} argument${expected === 1 ? '' : 's'}, `;
+  if (received === 0) {
+    errMsg += 'but received none';
+  } else {
+    errMsg += `but received only ${received}`;
+  }
+  error(errMsg);
 }
 
 function assertListOfNumbers(name: string, args: RacketValue[]): RacketNumber[] {

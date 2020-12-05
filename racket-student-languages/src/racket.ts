@@ -4,7 +4,7 @@ import Resolver from './resolver.js';
 import scanner from './scanner.js';
 
 class Racket {
-  resolver: Resolver = new Resolver();
+  private resolver: Resolver = new Resolver();
   interpreter: Interpreter = new Interpreter();
 
   private hasError = false;
@@ -22,8 +22,8 @@ class Racket {
 
     if (this.report()) return;
 
-    let resolver = new Resolver();
-    let ir2Exprs = resolver.resolve(ir1Exprs);
+    this.resolver = new Resolver();
+    let ir2Exprs = this.resolver.resolve(ir1Exprs);
     
     if (this.report()) return;
     

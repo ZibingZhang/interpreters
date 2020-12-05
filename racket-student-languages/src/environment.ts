@@ -1,8 +1,8 @@
 import { RacketValue } from "./values";
 
 export class Environment {
-  enclosing: Environment | undefined;
-  private values: Map<string, RacketValue> = new Map();
+  readonly enclosing: Environment | undefined;
+  private readonly values: Map<string, RacketValue> = new Map();
 
   constructor(enclosing: Environment | undefined = undefined) {
     this.enclosing = enclosing;

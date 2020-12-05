@@ -1,9 +1,9 @@
 import { RacketValueType } from "./values.js";
 
 export class SymbolTable {
-  enclosing: SymbolTable | undefined;
-  private values: Map<string, RacketValueType> = new Map();
-  private arities: Map<string, number> = new Map();
+  readonly enclosing: SymbolTable | undefined;
+  private readonly values: Map<string, RacketValueType> = new Map();
+  private readonly arities: Map<string, number> = new Map();
 
   constructor(enclosing: SymbolTable | undefined = undefined) {
     this.enclosing = enclosing;
@@ -15,7 +15,7 @@ export class SymbolTable {
 
   define(name: string, value: RacketValueType, arity: number | undefined = undefined): void {
     if (value === RacketValueType.FUNCTION) {
-      if (arity) {
+      if (arity !== undefined) {
         this.arities.set(name, arity);
       } else {
         throw new Error('Unreachable code.');
