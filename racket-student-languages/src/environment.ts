@@ -17,8 +17,7 @@ export class Environment {
    * @param value the value to which the name is mapped
    */
   define(name: string, value: RacketValue): void {
-    /*
-     * Note:
+    /* Note:
      *  It is not the environments job to prevent mutation. That should be
      *  enforced at the resolver level.
      */
@@ -30,8 +29,7 @@ export class Environment {
    * @param name the mapped name
    */
   get(name: string): RacketValue {
-    /*
-     * Note:
+    /* Note:
      *  It should be the case that an environment is never asked to retrieve a
      *  value that it does not have. This should be guaranteed at the resolver.
      */
