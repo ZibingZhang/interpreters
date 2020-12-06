@@ -141,9 +141,9 @@ function error(msg: string): never {
 
 /**
  * Assert that the function has at least `n` arguments.
- * @param {string} name the name of the function
- * @param {number} expected the minimum number of arguments expected
- * @param {number} received the actual number of arguments received
+ * @param name the name of the function
+ * @param expected the minimum number of arguments expected
+ * @param received the actual number of arguments received
  */
 function assertAtLeastNArguments(name: string, expected: number, received: number):  void {
   if (expected <= received) {
@@ -161,8 +161,8 @@ function assertAtLeastNArguments(name: string, expected: number, received: numbe
 
 /**
  * Assert that the arguments are all numbers.
- * @param {string} name the name of the function
- * @param {RacketValue[]} args the received arguments
+ * @param name the name of the function
+ * @param args the received arguments
  */
 function assertListOfNumbers(name: string, args: RacketValue[]): RacketNumber[] {
   let numbers: RacketNumber[] = [];
