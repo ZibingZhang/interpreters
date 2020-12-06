@@ -1,4 +1,5 @@
 import BUILT_INS from './builtins.js';
+import { RacketBuiltInFunction } from './builtins.js';
 import { 
   ResolverError, 
   UnreachableCode 
@@ -17,7 +18,6 @@ import {
   isBoolean,
   isNumber,
   isString,
-  RacketBuiltInFunction,
   RacketValueType
 } from './values.js';
 

@@ -1,5 +1,8 @@
 import { Environment } from './environment.js';
-import { BuiltinFunctionError, DivByZero, StructureFunctionError } from './errors.js';
+import { 
+  DivByZero, 
+  StructureFunctionError 
+} from './errors.js';
 import * as ir2 from './ir2.js';
 import racket from './racket.js';
 import * as utils from './utils.js';
@@ -488,30 +491,6 @@ export class RacketLambda implements RacketCallable {
   }
 }
 
-export abstract class RacketBuiltInFunction implements RacketCallable {
-  readonly name: string;
-  readonly min: number;
-  readonly max: number;
-
-  constructor(name: string, min: number, max: number) {
-    this.name = name;
-    this.min = min;
-    this.max = max;
-  }
-  
-  call(args: RacketValue[]): RacketValue {
-    throw new Error('Method not implemented.');
-  }
-
-  /**
-   * Raise an error.
-   * @param msg the error message
-   */
-  error(msg: string): never {
-    throw new BuiltinFunctionError(msg);
-  }
-}
-
 type RacketStructureCallback = (args: RacketValue[]) => RacketValue;
 
 class RacketStructureFunction implements RacketCallable {
@@ -625,6 +604,10 @@ export function isBoolean(object: any): object is RacketBoolean {
   return object instanceof RacketBoolean;
 }
 
+export function isExact(number: RacketNumber): number is RacketExactNumber {
+  return number instanceof RacketExactNumber;
+}
+
 export function isInstance(object: any): object is RacketInstance {
   return object instanceof RacketInstance;
 }
@@ -633,16 +616,16 @@ export function isNumber(object: any): object is RacketNumber {
   return object instanceof RacketNumber;
 }
 
+export function isReal(number: RacketValue): number is RacketRealNumber {
+  return number instanceof RacketRealNumber;
+}
+
 export function isString(object: any): object is RacketString {
   return object instanceof RacketString;
 }
 
 export function isStructure(object: any): object is RacketStructure {
   return object instanceof RacketStructure;
-}
-
-function isReal(number: RacketNumber): number is RacketRealNumber {
-  return number instanceof RacketRealNumber;
 }
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
