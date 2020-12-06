@@ -11,6 +11,10 @@ import {
   RacketValueType
 } from './values.js';
 
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Concrete Class
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
+
 /**
  * Checks for and reports errors.
  */
@@ -18,9 +22,9 @@ class ErrorReporter {
   resolver: ResolverErrorReporter = new ResolverErrorReporter();
 }
 
-/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-   * Resolver Potential Errors
-   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Resolver Potential Errors
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
 
 class ResolverErrorReporter {
 
@@ -341,5 +345,9 @@ class ResolverErrorReporter {
     throw new ResolverError(msg);
   }
 }
+
+/* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+ * Exports
+ * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
 
 export const reporter =  new ErrorReporter();

@@ -414,8 +414,8 @@ export class RacketComplexNumber extends RacketNumber {
 
   mul(other: RacketNumber): RacketNumber {
     if (other instanceof RacketComplexNumber) {
-      let real = this.real.mul(other.real);
-      let imaginary = this.imaginary.mul(other.imaginary);
+      let real = this.real.mul(other.real).sub(this.imaginary.mul(other.imaginary));
+      let imaginary = this.real.mul(other.imaginary).add(this.imaginary.mul(other.real));
       if (!isReal(real) || !isReal(imaginary)) throw new Error('Unreachable code.');
       if (imaginary.isZero()) return real;
       else return new RacketComplexNumber(real, imaginary);

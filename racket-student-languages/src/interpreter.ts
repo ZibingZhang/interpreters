@@ -74,7 +74,6 @@ export default class Interpreter implements ir2.ExprVisitor {
 
   visitIdentifier(expr: ir2.Identifier): RacketValue {
     let value = this.environment.get(expr.name.lexeme);
-    if (value === undefined) throw new Error('Unreachable code.');
     return value;
   }
 
