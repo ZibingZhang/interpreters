@@ -25,26 +25,30 @@
 		#code {
 			border: 1pt black solid;
 			white-space: pre;
+			padding: 30px;
+			font-family: "Fira Mono", monospace;
+			-moz-tab-size: 2;
+			tab-size: 2;
 		}
 	</style>
 	<!-- JS -->
 </head>
 
 <body>
-  <div id='code' contenteditable='true'>
-		(define-struct coord (x y))
-		(define g (lambda (y) (* y y)))
-		(define (f x) (* x x))
-		(define i +i)
+  <div id='code' contenteditable='true'
+>(define-struct coord (x y))
+(define g (lambda (y) (* y y)))
+(define (f x) (* x x))
+(define i +i)
 
-		(define coord1 (make-coord 4 #f))
-		(coord-x coord1)
-		(coord-y coord1)
+(define coord1 (make-coord 4 #f))
+(coord-x coord1)
+(coord-y coord1)
 
-		(g #i2-i)
-		(g #i2+i)
-		(+ i -i)
-	</div>
+(g #i2-i)
+(g #i2+i)
+(+ i -i)</div
+	>
 	<button id='run'>Run</button>
 	<script type='module' src='/dist/main.js'></script>
 </body>
