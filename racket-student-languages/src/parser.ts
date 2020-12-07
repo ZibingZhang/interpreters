@@ -149,10 +149,10 @@ class Parser {
    * Produces an Intermediate Representation I representation of the tokens.
    * @param tokens the token representation of the code
    */
-  parse(tokens: Token[]): ir1.Expr[] {
+  parse(tokens: Token[]): ir1.Stmt[] {
     let sexprs = this.tokenParser.parse(tokens);
 
-    let exprs: ir1.Expr[] = [];
+    let exprs: ir1.Stmt[] = [];
     for (let sexpr of sexprs) {
       exprs.push(this.expr(sexpr));
     }
@@ -163,7 +163,7 @@ class Parser {
    * Intermediate Representation I Forms
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  private expr(sexpr: SExpr): ir1.Expr {
+  private expr(sexpr: SExpr): ir1.Stmt {
     if (sexpr instanceof SExprList) {
       return this.group(sexpr);
     } else if (sexpr instanceof SExprLiteral) {

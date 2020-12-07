@@ -500,9 +500,9 @@ export interface RacketCallable extends RacketValue {
 
 export class RacketLambda implements RacketCallable {
   readonly params: string[];
-  readonly body: ir2.ExprToVisit;
+  readonly body: ir2.StmtToVisit;
 
-  constructor(params: string[], body: ir2.ExprToVisit) {
+  constructor(params: string[], body: ir2.StmtToVisit) {
     this.params = params;
     this.body = body;
   }

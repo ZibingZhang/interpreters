@@ -16,7 +16,7 @@ import {
 /**
  * An interpreter for executing Intermediate Representation IIs.
  */
-export default class Interpreter implements ir2.ExprVisitor {
+export default class Interpreter implements ir2.StmtVisitor {
   private static InterpreterError = class extends Error {
     readonly msg: string;
 
@@ -97,11 +97,11 @@ export default class Interpreter implements ir2.ExprVisitor {
    * Interpreting
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  evaluate(expr: ir2.ExprToVisit): RacketValue {
+  evaluate(expr: ir2.StmtToVisit): RacketValue {
     return expr.accept(this);
   }
 
-  interpret(exprs: ir2.ExprToVisit[]): RacketValue[] {
+  interpret(exprs: ir2.StmtToVisit[]): RacketValue[] {
     let values: RacketValue[] = [];
     try {
       for (let expr of exprs) {

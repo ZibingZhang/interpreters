@@ -26,7 +26,7 @@ import {
  * Transforms Intermediate Representation Is into Intermediate Representation 
  * IIs along with a lot of error checking.
  */
-export default class Resolver implements ir1.ExprVisitor {
+export default class Resolver implements ir1.StmtVisitor {
   private symbolTable: SymbolTable = new SymbolTable();
   private atTopLevel: boolean = true;
   private evaluatingCallee: boolean = false;
@@ -53,7 +53,7 @@ export default class Resolver implements ir1.ExprVisitor {
     let elements = expr.elements;
 
     if (this.resolvingQuoted) {
-      let groupElements: ir2.Expr[] = [];
+      let groupElements: ir2.Stmt[] = [];
       for (let element of elements) {
         groupElements.push(this.evaluate(element));
       }
@@ -138,8 +138,8 @@ export default class Resolver implements ir1.ExprVisitor {
    * Resolving
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  resolve(exprs: ir1.Expr[]): ir2.ExprToVisit[] {
-    let values: ir2.ExprToVisit[] = [];
+  resolve(exprs: ir1.Stmt[]): ir2.StmtToVisit[] {
+    let values: ir2.StmtToVisit[] = [];
     try {
       for (let expr of exprs) {
         let value = this.evaluate(expr);
@@ -154,7 +154,7 @@ export default class Resolver implements ir1.ExprVisitor {
     return values;
   }
 
-  private evaluate(expr: ir1.Expr): ir2.ExprToVisit {
+  private evaluate(expr: ir1.Stmt): ir2.StmtToVisit {
     return expr.accept(this);
   }
 
@@ -162,7 +162,7 @@ export default class Resolver implements ir1.ExprVisitor {
    * Group Sub-Cases
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  private define(exprs: ir1.Expr[]): ir2.DefineVariable {
+  private define(exprs: ir1.Stmt[]): ir2.DefineVariable {
     if (!this.atTopLevel) {
       reporter.resolver.nonTopLevelDefinition();
     } else if (exprs.length === 0) {
@@ -176,7 +176,7 @@ export default class Resolver implements ir1.ExprVisitor {
     }
   }
 
-  private defineFunction(nameAndParamList: ir1.Group, exprs: ir1.Expr[]): ir2.DefineVariable { 
+  private defineFunction(nameAndParamList: ir1.Group, exprs: ir1.Stmt[]): ir2.DefineVariable { 
     if (nameAndParamList.elements.length === 0) {
       reporter.resolver.missingFunctionName();
     }
@@ -219,7 +219,7 @@ export default class Resolver implements ir1.ExprVisitor {
     }
   }
 
-  private defineStructure(exprs: ir1.Expr[]): ir2.DefineStructure {
+  private defineStructure(exprs: ir1.Stmt[]): ir2.DefineStructure {
     if (!this.atTopLevel) {
       reporter.resolver.nonTopLevelStructureDefinition();
     } else if (exprs.length === 0) {
@@ -271,7 +271,7 @@ export default class Resolver implements ir1.ExprVisitor {
     }
   }
 
-  private defineVariable(exprs: ir1.Expr[]): ir2.DefineVariable {
+  private defineVariable(exprs: ir1.Stmt[]): ir2.DefineVariable {
     let identifier = exprs[0];
     if (identifier instanceof ir1.Identifier) {
       let name = identifier.name.lexeme;
@@ -304,7 +304,7 @@ export default class Resolver implements ir1.ExprVisitor {
     }
   }
 
-  private lambdaExpression(exprs: ir1.Expr[]): ir2.LambdaExpression {
+  private lambdaExpression(exprs: ir1.Stmt[]): ir2.LambdaExpression {
     if (!this.inFunctionDefinition) {
       reporter.resolver.lambdaNotInFunctionDefinition();
     } else if (exprs.length === 0) {
@@ -342,7 +342,7 @@ export default class Resolver implements ir1.ExprVisitor {
     }
   }
 
-  private quoted(exprs: ir1.Expr[]): ir2.Quoted {
+  private quoted(exprs: ir1.Stmt[]): ir2.Quoted {
     if (exprs.length !== 1) {
       reporter.resolver.quoteArityMismatch();
     }

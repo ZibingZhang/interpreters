@@ -5,22 +5,22 @@ import { Token } from './tokens.js'
  * Interfaces
  * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
 
- /**
-  * An expression, but more refined.
-  */
-export interface Expr {}
+/**
+ * A statement, but more refined.
+ */
+export interface Stmt {}
 
 /**
-  * An expression that will be visited.
+  * A statement that will be visited.
   */
-export interface ExprToVisit extends Expr {
-  accept(visitor: ExprVisitor): any;
+export interface StmtToVisit extends Stmt {
+  accept(visitor: StmtVisitor): any;
 }
 
 /**
- * A visitor for the Expr interface.
+ * A visitor for the Stmt interface.
  */
-export interface ExprVisitor {
+export interface StmtVisitor {
   visitCall(expr: Call): any;
   visitDefineStructure(expr: DefineStructure): any;
   visitDefineVariable(expr: DefineVariable): any;
@@ -37,16 +37,16 @@ export interface ExprVisitor {
  /**
   * A function call.
   */
-export class Call implements ExprToVisit {
-  readonly callee: ExprToVisit;
-  readonly arguments: ExprToVisit[];
+export class Call implements StmtToVisit {
+  readonly callee: StmtToVisit;
+  readonly arguments: StmtToVisit[];
 
-  constructor(callee: ExprToVisit, args: ExprToVisit[]) {
+  constructor(callee: StmtToVisit, args: StmtToVisit[]) {
     this.callee = callee;
     this.arguments = args;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitCall(this);
   }
 }
@@ -54,7 +54,7 @@ export class Call implements ExprToVisit {
 /**
  * A structure definition.
  */
-export class DefineStructure implements ExprToVisit {
+export class DefineStructure implements StmtToVisit {
   readonly name: string;
   readonly fields: string[];
 
@@ -63,7 +63,7 @@ export class DefineStructure implements ExprToVisit {
     this.fields = fields;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitDefineStructure(this);
   }
 }
@@ -71,16 +71,16 @@ export class DefineStructure implements ExprToVisit {
 /**
  * A variable definition.
  */
-export class DefineVariable implements ExprToVisit {
+export class DefineVariable implements StmtToVisit {
   readonly identifier: Identifier;
-  readonly expression: ExprToVisit;
+  readonly expression: StmtToVisit;
 
-  constructor(identifier: Identifier, expr: ExprToVisit) { 
+  constructor(identifier: Identifier, expr: StmtToVisit) { 
     this.identifier = identifier;
     this.expression = expr;
    }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitDefineVariable(this);
   }
 }
@@ -88,14 +88,14 @@ export class DefineVariable implements ExprToVisit {
 /**
  * An identifier.
  */
-export class Identifier implements ExprToVisit {
+export class Identifier implements StmtToVisit {
   readonly name: Token
 
   constructor(name: Token) {
     this.name = name;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitIdentifier(this);
   }
 }
@@ -103,16 +103,16 @@ export class Identifier implements ExprToVisit {
 /**
  * A lambda expression.
  */
-export class LambdaExpression implements ExprToVisit {
+export class LambdaExpression implements StmtToVisit {
   readonly names: Token[];
-  readonly body: ExprToVisit;
+  readonly body: StmtToVisit;
 
-  constructor(names: Token[], body: ExprToVisit) {
+  constructor(names: Token[], body: StmtToVisit) {
     this.names = names;
     this.body = body;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitLambdaExpression(this);
   }
 }
@@ -120,14 +120,14 @@ export class LambdaExpression implements ExprToVisit {
 /**
  * A literal value, i.e. boolean, number, string.
  */
-export class Literal implements ExprToVisit {
+export class Literal implements StmtToVisit {
   readonly value: RacketValue;
 
   constructor(value: RacketValue) {
     this.value = value;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitLiteral(this);
   }
 }
@@ -135,14 +135,14 @@ export class Literal implements ExprToVisit {
 /**
  * A quoted value, e.g. symbol or list.
  */
-export class Quoted implements ExprToVisit {
+export class Quoted implements StmtToVisit {
   readonly expression: Group | Identifier;
 
   constructor(expr: Group | Identifier) {
     this.expression = expr;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitQuoted(this);
   }
 }
@@ -155,10 +155,10 @@ export class Quoted implements ExprToVisit {
  * A group for `quote`.
  */
 
-export class Group implements Expr {
-  readonly elements: Expr[];
+export class Group implements Stmt {
+  readonly elements: Stmt[];
 
-  constructor(exprs: Expr[]) {
+  constructor(exprs: Stmt[]) {
     this.elements = exprs;
   }
 }

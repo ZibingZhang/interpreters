@@ -6,16 +6,16 @@ import { Token } from './tokens.js'
  * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
 
 /**
- * An expression.
+ * A statement.
  */
-export interface Expr {
-  accept(visitor: ExprVisitor): any;
+export interface Stmt {
+  accept(visitor: StmtVisitor): any;
 }
 
 /**
- * A visitor for the Expr interface.
+ * A visitor for the Stmt interface.
  */
-export interface ExprVisitor {
+export interface StmtVisitor {
   visitGroup(expr: Group): any;
   visitIdentifier(expr: Identifier): any;
   visitKeyword(expr: Keyword): any;
@@ -29,14 +29,14 @@ export interface ExprVisitor {
 /**
  * Any grouping of sub-expressions denoted using parentheses.
  */
-export class Group implements Expr {
-  readonly elements: Expr[];
+export class Group implements Stmt {
+  readonly elements: Stmt[];
 
-  constructor(elements: Expr[]) {
+  constructor(elements: Stmt[]) {
     this.elements = elements;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitGroup(this);
   }
 }
@@ -44,14 +44,14 @@ export class Group implements Expr {
 /**
  * An identifier, i.e. name.
  */
-export class Identifier implements Expr {
+export class Identifier implements Stmt {
   readonly name: Token;
 
   constructor(name: Token) {
     this.name = name;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitIdentifier(this);
   }
 }
@@ -59,14 +59,14 @@ export class Identifier implements Expr {
 /**
  * An identifier that happens to be a keyword.
  */
-export class Keyword implements Expr {
+export class Keyword implements Stmt {
   token: Token;
 
   constructor(token: Token) {
     this.token = token;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitKeyword(this);
   }
 }
@@ -74,14 +74,14 @@ export class Keyword implements Expr {
 /**
  * A literal value, i.e. boolean, number, string.
  */
-export class Literal implements Expr {
+export class Literal implements Stmt {
   readonly value: RacketValue;
 
   constructor(value: RacketValue) {
     this.value = value;
   }
 
-  accept(visitor: ExprVisitor): any {
+  accept(visitor: StmtVisitor): any {
     return visitor.visitLiteral(this);
   }
 }

@@ -37,7 +37,7 @@ class ResolverErrorReporter {
     this.error("function call: expected a function after the open parenthesis, but nothing's there");
   }
 
-  badCalleeType(callee: ir1.Expr): never {
+  badCalleeType(callee: ir1.Stmt): never {
     let baseMsg = 'function call: expected a function after the open parenthesis, ';
     if (callee instanceof ir1.Literal) {
       if (isBoolean(callee.value)) {
@@ -123,7 +123,7 @@ class ResolverErrorReporter {
     this.error("define: expected a name for the function, but nothing's there");
   }
 
-  badFunctionNameType(identifier: ir1.Expr): never {
+  badFunctionNameType(identifier: ir1.Stmt): never {
     let baseMsg = 'define: expected the name of the function, ';
     if (identifier instanceof ir1.Keyword) {
       this.error(baseMsg + 'but found a keyword');
@@ -144,7 +144,7 @@ class ResolverErrorReporter {
     this.error('define: expected at least one variable after the function name, but found none');
   }
 
-  badFunctionParamType(param: ir1.Expr): never {
+  badFunctionParamType(param: ir1.Stmt): never {
     let baseMsg = 'define: expected a variable, ';
     if (param instanceof ir1.Keyword) {
       this.error(baseMsg + 'but found a keyword');
@@ -181,7 +181,7 @@ class ResolverErrorReporter {
     this.error("define-struct: expected the structure name after define-struct, but nothing's there");
   }
 
-  badStructureNameType(identifier: ir1.Expr): never {
+  badStructureNameType(identifier: ir1.Stmt): never {
     let baseMsg = 'define-struct: expected the structures name after define-struct, ';
     if (identifier instanceof ir1.Group) {
       this.error(baseMsg + 'but found a part');
@@ -202,7 +202,7 @@ class ResolverErrorReporter {
     this.error("define-struct: expected at least one field name (in parentheses) after the structure name, but nothing's there");
   }
 
-  badFieldNamesType(fieldNames: ir1.Expr): never {
+  badFieldNamesType(fieldNames: ir1.Stmt): never {
     let baseMsg = 'define-struct: expected at least one field name (in parentheses) after the structure name, ';
     if (fieldNames instanceof ir1.Identifier
         || fieldNames instanceof ir1.Keyword) {
@@ -218,7 +218,7 @@ class ResolverErrorReporter {
     } else throw new UnreachableCode();
   }
 
-  badFieldNameType(fieldName: ir1.Expr): never {
+  badFieldNameType(fieldName: ir1.Stmt): never {
     let baseMsg = 'define-struct: expected a field name, ';
     if (fieldName instanceof ir1.Group) {
       this.error(baseMsg + 'but found a part');
@@ -237,7 +237,7 @@ class ResolverErrorReporter {
    * Group Sub-Case: Define Variable
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  badVariableNameType(identifier: ir1.Expr): never {
+  badVariableNameType(identifier: ir1.Stmt): never {
     let baseMsg = 'define: expected a variable name, or a function name and its variables (in parentheses), ';
     if (identifier instanceof ir1.Literal) {
       if (isBoolean(identifier.value)) {
@@ -276,7 +276,7 @@ class ResolverErrorReporter {
     this.error("lambda: expected (lambda (variable more-variable ...) expression), but nothing's there");
   }
 
-  badLambdaParamListType(paramList: ir1.Expr): never {
+  badLambdaParamListType(paramList: ir1.Stmt): never {
     let baseMsg = 'lambda: expected (lambda (variable more-variable ...) expression), ';
     if (paramList instanceof ir1.Identifier
       || paramList instanceof ir1.Keyword) {
@@ -296,7 +296,7 @@ class ResolverErrorReporter {
     this.error('lambda: expected (lambda (variable more-variable ...) expression), but found no variables');
   }
 
-  badLambdaParamType(param: ir1.Expr): never {
+  badLambdaParamType(param: ir1.Stmt): never {
     let baseMsg = 'lambda: expected a variable, ';
     if (param instanceof ir1.Keyword) {
       this.error(baseMsg + 'but found a keyword');
@@ -329,7 +329,7 @@ class ResolverErrorReporter {
     this.error('quote: expected an open parenthesis before quote, but found none');
   }
 
-  badQuotedExpressionType(expr: ir1.Expr): never {
+  badQuotedExpressionType(expr: ir1.Stmt): never {
     let baseMsg = 'quote: expected the name of a symbol or () after the quote, ';
     if (expr instanceof ir1.Literal) {
       if (isBoolean(expr.value)) {
