@@ -130,7 +130,7 @@ class SymPlus extends RacketBuiltInFunction {
  *    Subtracts the second (and following) number(s) from the first ; negates
  *    the number if there is only one argument.
  */
-class SymDash extends RacketBuiltInFunction {
+class SymMinus extends RacketBuiltInFunction {
   constructor() {
     super('-', 1, Infinity);
   }
@@ -158,7 +158,7 @@ class SymDash extends RacketBuiltInFunction {
  * Purpose Statement:
  *    Divides the first by the second (and all following) number(s).
  */
-class SymSlash extends RacketBuiltInFunction {
+class SymDivide extends RacketBuiltInFunction {
   constructor() {
     super('/', 2, Infinity);
   }
@@ -349,7 +349,7 @@ class MakeRectangular extends RacketBuiltInFunction {
  * Purpose Statement:
  *    Determines whether two booleans are equal.
  */
-class BooleanSymEqualHuh extends RacketBuiltInFunction {
+class BooleanSymEqHuh extends RacketBuiltInFunction {
   constructor() {
     super('boolean=?', 2, 2);
   }
@@ -442,7 +442,7 @@ class SymbolToString extends RacketBuiltInFunction {
  * Purpose Statement:
  *    Determines whether two symbols are equal.
  */
-class SymbolSymEqualHuh extends RacketBuiltInFunction {
+class SymbolSymEqHuh extends RacketBuiltInFunction {
   constructor() {
     super('symbol=?', 2, 2);
   }
@@ -702,33 +702,205 @@ function addBuiltInStructure(structure: RacketStructure): void {
 
 // Map from Name → Value
 let BUILT_INS: Map<string, RacketValue> = new Map();
-// Numeric Functions
+/* Numeric Functions */
 addBuiltinFunction(new SymStar());
 addBuiltinFunction(new SymPlus());
-addBuiltinFunction(new SymDash());
-addBuiltinFunction(new SymSlash());
+addBuiltinFunction(new SymMinus());
+addBuiltinFunction(new SymDivide());
+// addBuiltinFunction(new SymLt());
+// addBuiltinFunction(new SymLeq());
+// addBuiltinFunction(new SymEq());
+// addBuiltinFunction(new SymGt());
+// addBuiltinFunction(new SymGeq());
 addBuiltinFunction(new Abs());
+// addBuiltinFunction(new Acos());
+// addBuiltinFunction(new Add1());
+// addBuiltinFunction(new Angle());
+// addBuiltinFunction(new Asin());
+// addBuiltinFunction(new Atan());
+// addBuiltinFunction(new Ceiling());
 addBuiltinFunction(new ComplexHuh());
+// addBuiltinFunction(new Conjugate());
+// addBuiltinFunction(new Cos());
+// addBuiltinFunction(new Cosh());
+// addBuiltinFunction(new CurrentSeconds());
+// addBuiltinFunction(new Denominator());
+// addBuiltinFunction(new EvenHuh());
+// addBuiltinFunction(new ExactToInexact());
 addBuiltinFunction(new ExactHuh());
+// addBuiltinFunction(new Exp());
+// addBuiltinFunction(new Expt());
+// addBuiltinFunction(new Floor());
+// addBuiltinFunction(new Gcd());
+// addBuiltinFunction(new ImagPart());
+// addBuiltinFunction(new InexactToExact());
 addBuiltinFunction(new InexactHuh());
+// addBuiltinFunction(new IntegerToChar());
+// addBuiltinFunction(new IntegerSqrt());
 addBuiltinFunction(new IntegerHuh());
+// addBuiltinFunction(new Lcm());
+// addBuiltinFunction(new Log());
+// addBuiltinFunction(new Magnitude());
+// addBuiltinFunction(new MakePolar());
 addBuiltinFunction(new MakeRectangular());
+// addBuiltinFunction(new Max());
+// addBuiltinFunction(new Min());
+// addBuiltinFunction(new Modulo());
+// addBuiltinFunction(new NegativeHuh());
+// addBuiltinFunction(new NumberToString());
+// addBuiltinFunction(new NumberToStringDigits());
+// addBuiltinFunction(new NumberHuh());
+// addBuiltinFunction(new Numerator());
+// addBuiltinFunction(new OddHuh());
+// addBuiltinFunction(new PositiveHuh());
+// addBuiltinFunction(new Quotient());
+// addBuiltinFunction(new Random());
+// addBuiltinFunction(new RationalHuh());
+// addBuiltinFunction(new RealPart());
+// addBuiltinFunction(new RealHuh());
+// addBuiltinFunction(new Remainder());
+// addBuiltinFunction(new Round());
 addBuiltinFunction(new Sgn());
-// Boolean Functions
+// addBuiltinFunction(new Sin());
+// addBuiltinFunction(new Sinh());
+// addBuiltinFunction(new Sqr());
+// addBuiltinFunction(new Sqrt());
+// addBuiltinFunction(new Sub1());
+// addBuiltinFunction(new Tan());
+// addBuiltinFunction(new ZeroHuh());
+/* Boolean Functions */
 addBuiltinFunction(new BooleanToString());
-addBuiltinFunction(new BooleanSymEqualHuh());
+addBuiltinFunction(new BooleanSymEqHuh());
 addBuiltinFunction(new BooleanHuh());
 addBuiltinFunction(new FalseHuh());
 addBuiltinFunction(new Not());
-// Symbol Functions
+/* Symbol Functions */
 addBuiltinFunction(new SymbolToString());
-addBuiltinFunction(new SymbolSymEqualHuh());
+addBuiltinFunction(new SymbolSymEqHuh());
 addBuiltinFunction(new SymbolHuh());
-// List Functions
+/* List Functions */
+// addBuiltinFunction(new Append());
+// addBuiltinFunction(new Assoc());
+// addBuiltinFunction(new Assq());
+// addBuiltinFunction(new Caaar());
+// addBuiltinFunction(new Caadr());
+// addBuiltinFunction(new Caar());
+// addBuiltinFunction(new Cadar());
+// addBuiltinFunction(new Cadddr());
+// addBuiltinFunction(new Caddr());
+// addBuiltinFunction(new Cadr());
+// addBuiltinFunction(new Car());
+// addBuiltinFunction(new Cdaar());
+// addBuiltinFunction(new Cdadr());
+// addBuiltinFunction(new Cdar());
+// addBuiltinFunction(new Cddar());
+// addBuiltinFunction(new Cdddr());
+// addBuiltinFunction(new Cddr());
+// addBuiltinFunction(new Cdr());
 addBuiltinFunction(new Cons());
-// Structures
+// addBuiltinFunction(new Eigth());
+// addBuiltinFunction(new EmptyHuh());
+// addBuiltinFunction(new Fifth());
+// addBuiltinFunction(new First());
+// addBuiltinFunction(new Fourth());
+// addBuiltinFunction(new Length());
+// addBuiltinFunction(new List());
+// addBuiltinFunction(new ListStar());
+// addBuiltinFunction(new ListRef());
+// addBuiltinFunction(new ListHuh());
+// addBuiltinFunction(new MakeList());
+// addBuiltinFunction(new Member());
+// addBuiltinFunction(new MemberHuh());
+// addBuiltinFunction(new Memq());
+// addBuiltinFunction(new MemqHuh());
+// addBuiltinFunction(new Memv());
+// addBuiltinFunction(new NullHuh());
+// addBuiltinFunction(new Range());
+// addBuiltinFunction(new Remove());
+// addBuiltinFunction(new RemoveAll());
+// addBuiltinFunction(new Rest());
+// addBuiltinFunction(new Reverse());
+// addBuiltinFunction(new Second());
+// addBuiltinFunction(new Seventh());
+// addBuiltinFunction(new Sixth());
+// addBuiltinFunction(new Third());
+/* Character Functions */
+// addBuiltinFunction(new CharToInteger());
+// addBuiltinFunction(new CharAlphanumicHuh());
+// addBuiltinFunction(new CharCiSyLeqHuh());
+// addBuiltinFunction(new CharCiSymLtHuh());
+// addBuiltinFunction(new CharCiSymEqHuh());
+// addBuiltinFunction(new CharCiSymGeqHuh());
+// addBuiltinFunction(new CharCiSymGtHuh());
+// addBuiltinFunction(new CharDowncase());
+// addBuiltinFunction(new CharLowerCaseHuh());
+// addBuiltinFunction(new CharNumericHuh());
+// addBuiltinFunction(new CharUpcase());
+// addBuiltinFunction(new CharUpperCaseHuh());
+// addBuiltinFunction(new CharWhitespaceHuh());
+// addBuiltinFunction(new CharSymLeqHuh());
+// addBuiltinFunction(new CharSymLtHuh());
+// addBuiltinFunction(new CharSymEqHuh());
+// addBuiltinFunction(new CharSymGeqHuh());
+// addBuiltinFunction(new CharSymGtHuh());
+// addBuiltinFunction(new CharHuh());
+/* String Functions */
+// addBuiltinFunction(new Explode());
+// addBuiltinFunction(new Format());
+// addBuiltinFunction(new Implode());
+// addBuiltinFunction(new IntToString());
+// addBuiltinFunction(new ListToString());
+// addBuiltinFunction(new MakeString());
+// addBuiltinFunction(new Replicate());
+// addBuiltinFunction(new String());
+// addBuiltinFunction(new StringToInt());
+// addBuiltinFunction(new StringToList());
+// addBuiltinFunction(new StringToNumber());
+// addBuiltinFunction(new StringToSymbol());
+// addBuiltinFunction(new StringAlphabeticHuh());
+// addBuiltinFunction(new StringAppend());
+// addBuiltinFunction(new StringCiSymLeqHuh());
+// addBuiltinFunction(new StringCiSymLtHuh());
+// addBuiltinFunction(new StringCiSymEqHuh());
+// addBuiltinFunction(new StringCiSymGeqHuh());
+// addBuiltinFunction(new StringCiSymGtHuh());
+// addBuiltinFunction(new StringContainsCiHuh());
+// addBuiltinFunction(new StringContainsHuh());
+// addBuiltinFunction(new StringCopy());
+// addBuiltinFunction(new StringDowncase());
+// addBuiltinFunction(new StringIth());
+// addBuiltinFunction(new StringLength());
+// addBuiltinFunction(new StringLowerCaseHuh());
+// addBuiltinFunction(new StringNumericHuh());
+// addBuiltinFunction(new StringRef());
+// addBuiltinFunction(new StringUpcase());
+// addBuiltinFunction(new StringUpperCaseHuh());
+// addBuiltinFunction(new StringWhitespaceHuh());
+// addBuiltinFunction(new StringSymLeqHuh());
+// addBuiltinFunction(new StringSymLtHuh());
+// addBuiltinFunction(new StringSymEqHuh());
+// addBuiltinFunction(new StringSymGeqHuh());
+// addBuiltinFunction(new StringSymGeHuh());
+// addBuiltinFunction(new StringHuh());
+// addBuiltinFunction(new Substring());
+/* Image Functions */
+// addBuiltinFunction(new ImageSymEqHuh());
+// addBuiltinFunction(new ImageHuh());
+/* Misc Functions */
+// addBuiltinFunction(new SymEqSymTilda());
+// addBuiltinFunction(new Eof());
+// addBuiltinFunction(new EofObjectHuh());
+// addBuiltinFunction(new EqHuh());
+// addBuiltinFunction(new EqualHuh());
+// addBuiltinFunction(new EqualSymTildaHuh());
+// addBuiltinFunction(new EqvHuh());
+// addBuiltinFunction(new Error());
+// addBuiltinFunction(new Exit());
+// addBuiltinFunction(new Identity());
+// addBuiltinFunction(new StructHuh());
+/* Structures */
 addBuiltInStructure(new RacketStructure('posn', ['x', 'y']));
-// Literals
+/* Literals */
 BUILT_INS.set('e', new RacketInexactFraction(6121026514868073n, 2251799813685248n));
 BUILT_INS.set('empty', RACKET_EMPTY_LIST);
 BUILT_INS.set('null', RACKET_EMPTY_LIST);
