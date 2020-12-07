@@ -11,7 +11,6 @@ interface Output {
 
 /**
  * The console.
- * @implements Output
  */
 export class Console implements Output {
   display(text: string): void {

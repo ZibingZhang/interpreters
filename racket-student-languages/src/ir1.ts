@@ -28,7 +28,6 @@ export interface ExprVisitor {
 
 /**
  * Any grouping of sub-expressions denoted using parentheses.
- * @implements Expr
  */
 export class Group implements Expr {
   readonly elements: Expr[];
@@ -44,7 +43,6 @@ export class Group implements Expr {
 
 /**
  * An identifier, i.e. name.
- * @implements Expr
  */
 export class Identifier implements Expr {
   readonly name: Token;
@@ -60,7 +58,6 @@ export class Identifier implements Expr {
 
 /**
  * An identifier that happens to be a keyword.
- * @implements Expr
  */
 export class Keyword implements Expr {
   token: Token;
@@ -76,7 +73,6 @@ export class Keyword implements Expr {
 
 /**
  * A literal value, i.e. boolean, number, string.
- * @implements Expr
  */
 export class Literal implements Expr {
   readonly value: RacketValue;

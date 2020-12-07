@@ -8,7 +8,9 @@ import {
   isNumber,
   RacketLambda,
   RacketStructure,
-  RacketValue 
+  RacketSymbol,
+  RacketValue, 
+  RACKET_EMPTY_LIST
 } from './values.js';
 
 /**
@@ -81,15 +83,23 @@ export default class Interpreter implements ir2.ExprVisitor {
     return expr.value;
   }
 
+  visitQuoted(expr: ir2.Quoted): RacketValue {
+    if (expr.expression instanceof ir2.Group) {
+      return RACKET_EMPTY_LIST;
+    } else {
+      return new RacketSymbol(expr.expression.name.lexeme);
+    }
+  }
+
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
    * Interpreting
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  evaluate(expr: ir2.Expr): RacketValue {
+  evaluate(expr: ir2.ExprToVisit): RacketValue {
     return expr.accept(this);
   }
 
-  interpret(exprs: ir2.Expr[]): RacketValue[] {
+  interpret(exprs: ir2.ExprToVisit[]): RacketValue[] {
     let values: RacketValue[] = [];
     try {
       for (let expr of exprs) {

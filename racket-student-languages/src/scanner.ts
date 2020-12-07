@@ -1,4 +1,7 @@
-import { DivByZero } from './errors.js';
+import {
+  DivByZero,
+  UnreachableCode
+} from './errors.js';
 import {
   RacketBoolean,
   RacketComplexNumber,
@@ -11,7 +14,11 @@ import {
   RACKET_FALSE,
   RACKET_TRUE
 } from './values.js';
-import { KEYWORDS, Token, TokenType } from './tokens.js'
+import { 
+  KEYWORDS, 
+  Token, 
+  TokenType 
+} from './tokens.js'
 import * as utils from './utils.js';
 import racket from './racket.js';
 
@@ -27,6 +34,28 @@ class Scanner {
       this.msg = msg;
     }
   }
+
+  private escapedChars = new Map<string, string>([
+    ['a', '\a'],
+    ['b', '\b'],
+    ['e', '\e'],
+    ['f', '\f'],
+    ['n', '\n'],
+    ['r', '\r'],
+    ['t', '\t'],
+    ['v', '\v'],
+    ['\\', '\\'],
+    ["'", '\''],
+    ['"', '\"']
+  ]);
+
+  private singleCharTokens = new Map<string, TokenType>([
+    ['(', TokenType.LEFT_PAREN],
+    [')', TokenType.RIGHT_PAREN],
+    ["'", TokenType.QUOTE]
+  ]);
+
+  private whiteSpaceChars = new Set([' ', '\n', '\r', '\t']);
 
   private text: string = '';
   private current: number = 0;
@@ -44,45 +73,36 @@ class Scanner {
     try {
       for (; !this.isAtEnd(); this.advance()) {
         let char = text.charAt(this.current);
-        switch (char) {
-          case '(': {
-            name = this.addCurrentName(tokens, name);
-            tokens.push(new Token(TokenType.LEFT_PAREN, char));
-            break;
-          }
-          case ')': {
-            name = this.addCurrentName(tokens, name);
-            tokens.push(new Token(TokenType.RIGHT_PAREN, char));
-            break;
-          }
-          case '"':
-            name = this.addCurrentName(tokens, name);
-            this.addString(tokens);
-            break;
-          case ' ':
-          case '\n':
-          case '\t': {
-            name = this.addCurrentName(tokens, name);
-            break;
-          }
-          default: {
-            name += char;
-          }
+        let type;
+        if (type = this.singleCharTokens.get(char)) {
+          name = this.addCurrentName(tokens, name);
+          tokens.push(new Token(type, char));
+        } else if (this.whiteSpaceChars.has(char)) {
+          name = this.addCurrentName(tokens, name);
+        } else if (char === '"') {
+          name = this.addCurrentName(tokens, name);
+          this.addString(tokens);
+        } else {
+          name += char;
         }
       }
       this.addCurrentName(tokens, name);
+      if (tokens.length > 0 
+          && tokens[tokens.length - 1] 
+          && tokens[tokens.length - 1].type === TokenType.QUOTE) {
+        this.error('expected an element for quoting "\'", found end-of-file');
+      }
       tokens.push(new Token(TokenType.EOF, ''));
       return tokens;
     } catch (err) {
       if (err instanceof DivByZero) {
-        this.error(`division by zero in \`${name}\``);
+        racket.error(`division by zero in \`${name}\``);
       } else if (err instanceof Scanner.ScannerError) {
-        this.error(err.msg);
+        racket.error(err.msg);
       } else {
         throw err;
       }
     }
-
     return tokens;
   }
 
@@ -132,53 +152,19 @@ class Scanner {
       if (char === '\\') {
         if (this.isAtEnd()) {
           this.error('expected a closing `"`');
-          return;
         }
         this.advance();
-        let escapedChar = this.previous();
-        switch (escapedChar) {
-          case 'a':
-            string += '\a';
-            break;
-          case 'b':
-            string += '\b';
-            break;
-          case 'e':
-            string += '\e';
-            break;
-          case 'f':
-            string += '\f';
-            break;
-          case 'n':
-            string += '\n';
-            break;
-          case 'r':
-            string += '\r';
-            break;
-          case 't':
-            string += '\t';
-            break;
-          case 'v':
-            string += '\v';
-            break;
-          case '\\':
-            string += '\\';
-            break;
-          case "'":
-            string += '\'';
-            break;
-          case '"':
-            string += '\"';
-            break;
-          default:
-            this.error(`unknown escape sequence \`\\${escapedChar}\` in string`);
-            return;
+        let escapedChar = this.escapedChars.get(this.previous());
+        if (escapedChar !== undefined) {
+          string += escapedChar;
+        } else {
+          this.error(`unknown escape sequence \`\\${this.previous()}\` in string`);
         }
       } else {
         string += char;
       }
     }
-    if (this.peek() !== '"') {
+    if (this.peek() === false) {
       this.error('expected a closing `"`');
     }
     tokens.push(new Token(TokenType.STRING, string, new RacketString(string)));
@@ -188,22 +174,32 @@ class Scanner {
    * Error Reporting
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  private error(msg: string): void {
-    racket.error(`read-syntax: ${msg}`);
+  private error(msg: string): never {
+    throw new Scanner.ScannerError(msg);
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
    * Variables and Literal Values
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  private lexemeToToken(name: string): Token {
-    let type = KEYWORDS.get(name);
-    if (type !== undefined) return new Token(type, name);
-    let value: RacketBoolean | RacketNumber | false = this.isBoolean(name);
-    if (value !== false) return new Token(TokenType.BOOLEAN, name, value);
-    value = this.isNumber(name);
-    if (value !== false) return new Token(TokenType.NUMBER, name, value);
-    return new Token(TokenType.IDENTIFIER, name);
+  private lexemeToToken(text: string): Token {
+    // check for keywords
+    let type = KEYWORDS.get(text);
+    if (type !== undefined) {
+      return new Token(type, text);
+    }
+    // check for booleans
+    let value: RacketBoolean | RacketNumber | false = this.isBoolean(text);
+    if (value !== false) {
+      return new Token(TokenType.BOOLEAN, text, value);
+    }
+    // check for numbers
+    value = this.isNumber(text);
+    if (value !== false) {
+      return new Token(TokenType.NUMBER, text, value);
+    }
+    // everything else is an identifier
+    return new Token(TokenType.IDENTIFIER, text);
   }
 
   private isBoolean(text: string): RacketBoolean | false {
@@ -283,7 +279,7 @@ class Scanner {
       if (isExact) real = new RacketExactNumber(realSign * realNumerator / gcd, realRest / gcd);
       else real = new RacketInexactFraction(realSign * realNumerator / gcd, realRest / gcd);
     } else {
-      throw new Error('Unreachable code.');
+      throw new UnreachableCode();
     }
 
     if (!hasImaginary) return real;
@@ -304,7 +300,7 @@ class Scanner {
       if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator / gcd, imaginaryRest / gcd);
       else imaginary = new RacketInexactFraction(imaginarySign * imaginaryNumerator / gcd, imaginaryRest / gcd);
     } else {
-      throw new Error('Unreachable code.');
+      throw new UnreachableCode();
     }
 
     return new RacketComplexNumber(real, imaginary);

@@ -44,6 +44,38 @@ export const RACKET_TRUE = new RacketBoolean(true);
 export const RACKET_FALSE = new RacketBoolean(false);
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Lists
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+ /**
+  * A Racket list.
+  */
+export interface RacketList extends RacketValue {}
+
+export class RacketConstructedList implements RacketList {
+  readonly first: RacketValue;
+  readonly rest: RacketList;
+
+  constructor(first: RacketValue[], rest: RacketList) {
+    this.first = first;
+    this.rest = rest;
+  }
+
+  toString(): string {
+    return `(cons ${this.first.toString()} ${this.rest.toString()})`;
+  }
+}
+
+export class RacketEmptyList implements RacketList {
+  toString(): string {
+    console.log('EMPTY')
+    return "'()";
+  }
+}
+
+export const RACKET_EMPTY_LIST = new RacketEmptyList();
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Numbers
  *
  * Class Structure:
@@ -434,9 +466,9 @@ export class RacketComplexNumber extends RacketNumber {
  * Strings
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
- /**
-  * A Racket string.
-  */
+/**
+* A Racket string.
+*/
 export class RacketString implements RacketValue {
   private value: string;
 
@@ -469,9 +501,9 @@ export interface RacketCallable extends RacketValue {
 
 export class RacketLambda implements RacketCallable {
   readonly params: string[];
-  readonly body: ir2.Expr;
+  readonly body: ir2.ExprToVisit;
 
-  constructor(params: string[], body: ir2.Expr) {
+  constructor(params: string[], body: ir2.ExprToVisit) {
     this.params = params;
     this.body = body;
   }
@@ -593,6 +625,25 @@ export class RacketInstance implements RacketValue {
 }
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Symbols
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/**
+* A Racket symbol.
+*/
+export class RacketSymbol implements RacketValue {
+  private name: string;
+
+  constructor(name: string) {
+    this.name = name;
+  }
+
+  toString(): string {
+    return "'" + this.name;
+  }
+}
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Type Guards
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
@@ -601,7 +652,7 @@ export function isCallable(object: any): object is RacketCallable {
 }
 
 export function isBoolean(object: any): object is RacketBoolean {
-  return object instanceof RacketBoolean;
+  return object === RACKET_TRUE || object === RACKET_FALSE;
 }
 
 export function isExact(number: RacketNumber): number is RacketExactNumber {
@@ -610,6 +661,11 @@ export function isExact(number: RacketNumber): number is RacketExactNumber {
 
 export function isInstance(object: any): object is RacketInstance {
   return object instanceof RacketInstance;
+}
+
+export function isList(object: any): object is RacketList {
+  return object instanceof RacketConstructedList
+    || object === RACKET_EMPTY_LIST;
 }
 
 export function isNumber(object: any): object is RacketNumber {
@@ -628,22 +684,9 @@ export function isStructure(object: any): object is RacketStructure {
   return object instanceof RacketStructure;
 }
 
-/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
- * Racket Value Types
- * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
-
-export enum RacketValueType {
-  BUILTIN_FUNCTION = 'BUILTIN_FUNCTION',
-  BUILTIN_LITERAL = 'BUILTIN_LITERAL',
-  BOOLEAN = 'BOOLEAN',
-  FUNCTION = 'FUNCTION',
-  INSTANCE = 'INSTANCE',
-  NUMBER = 'NUMBER',
-  PARAMETER = 'PARAMETER',
-  STRING = 'STRING',
-  STRUCTURE = 'STRUCTURE',
-  VARIABLE = 'VARIABLE'
-}
+// export function isSymbol(object: any): object is RacketSymbol {
+//   return object instanceof RacketSymbol;
+// }
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Helper Functions

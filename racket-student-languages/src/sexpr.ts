@@ -26,7 +26,6 @@ export interface SExprVisitor {
 
  /**
   * A list.
-  * @implements SExpr
   */
 export class SExprList implements SExpr {
   readonly elements: SExpr[];
@@ -48,7 +47,6 @@ export class SExprList implements SExpr {
 
 /**
  * A literal value, i.e. boolean, number, string.
- * @implements SExpr
  */
 export class SExprLiteral implements SExpr {
   readonly token: Token;
@@ -70,7 +68,6 @@ export class SExprLiteral implements SExpr {
 
 /**
  * A symbol.
- * @implements SExpr
  */
 export class SExprSymbol implements SExpr {
   readonly token: Token;

@@ -4,11 +4,12 @@ import {
   UnreachableCode
 } from './errors.js';
 import * as ir1 from './ir1.js';
+import { RacketValueType } from './symboltable.js';
 import { 
   isBoolean, 
   isNumber, 
   isString, 
-  RacketValueType
+  // isSymbol
 } from './values.js';
 
 /* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -55,22 +56,16 @@ class ResolverErrorReporter {
     this.error(`${name}: this function is not defined`);
   }
 
-  checkCalleeType(type: RacketValueType, name: string): void {
-    let baseMsg = 'function call: expected a variable name, or a function name and its variables (in parentheses), ';
-    if (type === RacketValueType.BOOLEAN) {
-      this.error(baseMsg + 'but found something else');
-    } else if (type === RacketValueType.NUMBER) {
-      this.error(baseMsg + 'but found a number');
-    } else if (type === RacketValueType.STRING) {
-      this.error(baseMsg + 'but found a string');
-    } else if (type === RacketValueType.STRUCTURE) {
+  checkCalleeValueType(type: RacketValueType, name: string): void {
+    let baseMsg = 'function call: expected a function after the open parenthesis, ';
+    if (type === RacketValueType.STRUCTURE) {
       this.error(baseMsg + `but found a structure type (do you mean make-${name})`);
     } else if (type === RacketValueType.VARIABLE) {
       this.error(baseMsg + 'but found a variable');
     }
   }
 
-  arityMismatch(name: string, expected: number, actual: number): never {
+  functionArityMismatch(name: string, expected: number, actual: number): never {
     let errMsg = `${name}: `;
     if (actual > expected) {
       errMsg += `expects only ${expected} argument${expected === 1 ? '' : 's'}, but found ${actual}`;
@@ -150,17 +145,18 @@ class ResolverErrorReporter {
   }
 
   badFunctionParamType(param: ir1.Expr): never {
+    let baseMsg = 'define: expected a variable, ';
     if (param instanceof ir1.Keyword) {
-      this.error('define: expected a variable, but found a keyword');
+      this.error(baseMsg + 'but found a keyword');
     } else if (param instanceof ir1.Group) {
-      this.error('define: expected a variable, but found a part');
+      this.error(baseMsg + 'but found a part');
     } else if (param instanceof ir1.Literal) {
       if (isBoolean(param.value)) {
-        this.error('define: expected a variable, but found a something else');
+        this.error(baseMsg + 'but found a something else');
       } else if (isNumber(param.value)) {
-        this.error('define: expected a variable, but found a number');
+        this.error(baseMsg + 'but found a number');
       } else if (isString(param.value)) {
-        this.error('define: expected a variable, but found a string');
+        this.error(baseMsg + 'but found a string');
       } else throw new UnreachableCode();
     } else throw new UnreachableCode();
   }
@@ -323,6 +319,31 @@ class ResolverErrorReporter {
 
   expectedSingleExpressionLambdaBody(exprs: number): never {
     this.error(`lambda: expected only one expression for the function body, but found ${exprs - 2} extra part${exprs - 2 === 1 ? '' : 's'}`);
+  }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Group Sub-Case: Quoted
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  quoteArityMismatch(): never {
+    this.error('quote: expected an open parenthesis before quote, but found none');
+  }
+
+  badQuotedExpressionType(expr: ir1.Expr): never {
+    let baseMsg = 'quote: expected the name of a symbol or () after the quote, ';
+    if (expr instanceof ir1.Literal) {
+      if (isBoolean(expr.value)) {
+        this.error(baseMsg + 'but found something else');
+      } else if (isNumber(expr.value)) {
+        this.error(baseMsg + 'but found a number');
+      } else if (isString(expr.value)) {
+        this.error(baseMsg + 'but found a string');
+      } else throw new UnreachableCode();
+    } else throw new UnreachableCode();
+  }
+
+  quotedNonEmptyGroup(): never {
+    this.error('quote: expected the name of a symbol or () after the quote, but found a part');
   }
   
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

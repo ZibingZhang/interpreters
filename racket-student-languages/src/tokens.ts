@@ -14,6 +14,7 @@ export enum TokenType {
   BOOLEAN = 'BOOLEAN',
   IDENTIFIER = 'IDENTIFIER',
   NUMBER = 'NUMBER',
+  QUOTE = 'QUOTE',
   STRING = 'STRING',
   
   EOF = 'EOF'

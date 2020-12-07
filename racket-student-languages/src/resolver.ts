@@ -8,17 +8,17 @@ import * as ir1 from './ir1.js';
 import * as ir2 from './ir2.js';
 import racket from './racket.js';
 import { reporter } from './reporter.js';
-import { SymbolTable } from './symboltable.js';
+import { 
+  RacketValueType, 
+  SymbolTable 
+} from './symboltable.js';
 import { 
   KEYWORDS, 
   Token, 
   TokenType 
 } from './tokens.js';
 import { 
-  isBoolean,
-  isNumber,
-  isString,
-  RacketValueType
+  isNumber
 } from './values.js';
 
 /**
@@ -30,6 +30,7 @@ export default class Resolver implements ir1.ExprVisitor {
   private atTopLevel: boolean = true;
   private evaluatingCallee: boolean = false;
   private inFunctionDefinition: boolean = false;
+  private resolvingQuoted: boolean = false;
 
   constructor() {
     for (let [name, value] of BUILT_INS) {
@@ -47,9 +48,18 @@ export default class Resolver implements ir1.ExprVisitor {
    * Visitor
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  visitGroup(expr: ir1.Group): ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.LambdaExpression {
+  visitGroup(expr: ir1.Group): ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.Quoted {
     let elements = expr.elements;
-    if (elements.length === 0) {
+
+    if (this.resolvingQuoted) {
+      let groupElements: ir2.Expr[] = [];
+      for (let element of elements) {
+        groupElements.push(this.evaluate(element));
+      }
+      return new ir2.Group(groupElements);
+    }
+
+    if (elements.length === 0) { 
       reporter.resolver.emptyGroup();
     }
     
@@ -75,6 +85,9 @@ export default class Resolver implements ir1.ExprVisitor {
       } else throw new UnreachableCode();
     } else if (callee instanceof ir1.Identifier) {
       let name = callee.name.lexeme;
+      if (name === 'quote') {
+        return this.quoted(args);
+      }
       let type = this.symbolTable.get(name);
       if (type === undefined) { 
         reporter.resolver.undefinedCallee(name);
@@ -82,10 +95,10 @@ export default class Resolver implements ir1.ExprVisitor {
         let expected = this.symbolTable.getArity(name);
         let actual = args.length;
         if (expected != actual) {
-          reporter.resolver.arityMismatch(name, expected, actual);
+          reporter.resolver.functionArityMismatch(name, expected, actual);
         }
       } else {
-        reporter.resolver.checkCalleeType(type, name);
+        reporter.resolver.checkCalleeValueType(type, name);
       }
     } else {
       reporter.resolver.badCalleeType(callee);
@@ -101,10 +114,12 @@ export default class Resolver implements ir1.ExprVisitor {
   visitIdentifier(expr: ir1.Identifier): ir2.Identifier {
     let name = expr.name.lexeme;
     let type = this.symbolTable.get(name);
-    if (type === undefined) {
-      reporter.resolver.undefinedIdentifier(name);
-    } else {
-      reporter.resolver.checkIdentifierType(type, this.evaluatingCallee, name);
+    if (!this.resolvingQuoted) {
+      if (type === undefined) {
+        reporter.resolver.undefinedIdentifier(name);
+      } else {
+        reporter.resolver.checkIdentifierType(type, this.evaluatingCallee, name);
+      }
     }
     return new ir2.Identifier(expr.name);
   }
@@ -122,8 +137,8 @@ export default class Resolver implements ir1.ExprVisitor {
    * Resolving
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  resolve(exprs: ir1.Expr[]): ir2.Expr[] {
-    let values: ir2.Expr[] = [];
+  resolve(exprs: ir1.Expr[]): ir2.ExprToVisit[] {
+    let values: ir2.ExprToVisit[] = [];
     try {
       for (let expr of exprs) {
         let value = this.evaluate(expr);
@@ -138,7 +153,7 @@ export default class Resolver implements ir1.ExprVisitor {
     return values;
   }
 
-  private evaluate(expr: ir1.Expr): ir2.Expr {
+  private evaluate(expr: ir1.Expr): ir2.ExprToVisit {
     return expr.accept(this);
   }
 
@@ -276,13 +291,7 @@ export default class Resolver implements ir1.ExprVisitor {
       } else if (body instanceof ir2.LambdaExpression) {
         this.symbolTable.define(name, RacketValueType.FUNCTION, body.names.length);
       } else if (body instanceof ir2.Literal) {
-        if (isBoolean(body.value)) {
-          this.symbolTable.define(name, RacketValueType.BOOLEAN);
-        } else if (isNumber(body.value)) {
-          this.symbolTable.define(name, RacketValueType.NUMBER);
-        } else if (isString(body.value)) {
-          this.symbolTable.define(name, RacketValueType.STRING);
-        } else throw new Error('Unreachable code.');
+        this.symbolTable.define(name, RacketValueType.VARIABLE);
       } else throw new Error('Unreachable code.');
       return new ir2.DefineVariable(new ir2.Identifier(identifier.name), this.evaluate(exprs[1]));
     } else {
@@ -326,6 +335,32 @@ export default class Resolver implements ir1.ExprVisitor {
     } else {
       // return statement for typechecker
       return reporter.resolver.badLambdaParamListType(paramList);
+    }
+  }
+
+  private quoted(exprs: ir1.Expr[]): ir2.Quoted {
+    if (exprs.length !== 1) {
+      reporter.resolver.quoteArityMismatch();
+    }
+    let expr = exprs[0];
+    if (expr instanceof ir1.Identifier 
+        || expr instanceof ir1.Keyword 
+        || expr instanceof ir1.Group) {
+      let resolvingQuoted = this.resolvingQuoted;
+      this.resolvingQuoted = true;
+      let evaledExpr = this.evaluate(expr);
+      this.resolvingQuoted = resolvingQuoted;
+      if (evaledExpr instanceof ir2.Group) {
+        if (evaledExpr.elements.length !== 0) {
+          reporter.resolver.quotedNonEmptyGroup();
+        }
+      }
+      if (evaledExpr instanceof ir2.Group || evaledExpr instanceof ir2.Identifier) {
+        return new ir2.Quoted(evaledExpr);
+      } else throw new UnreachableCode();
+    } else {
+      // return statement for typechecker
+      return reporter.resolver.badQuotedExpressionType(expr);
     }
   }
 }

@@ -8,7 +8,12 @@ import { Token } from './tokens.js'
  /**
   * An expression, but more refined.
   */
-export interface Expr {
+export interface Expr {}
+
+/**
+  * An expression that will be visited.
+  */
+export interface ExprToVisit extends Expr {
   accept(visitor: ExprVisitor): any;
 }
 
@@ -22,6 +27,7 @@ export interface ExprVisitor {
   visitLambdaExpression(expr: LambdaExpression): any;
   visitLiteral(expr: Literal): any;
   visitIdentifier(expr: Identifier): any;
+  visitQuoted(expr: Quoted): any;
 }
 
 /* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -30,13 +36,12 @@ export interface ExprVisitor {
 
  /**
   * A function call.
-  * @implements Expr
   */
-export class Call implements Expr {
-  readonly callee: Expr;
-  readonly arguments: Expr[];
+export class Call implements ExprToVisit {
+  readonly callee: ExprToVisit;
+  readonly arguments: ExprToVisit[];
 
-  constructor(callee: Expr, args: Expr[]) {
+  constructor(callee: ExprToVisit, args: ExprToVisit[]) {
     this.callee = callee;
     this.arguments = args;
   }
@@ -48,9 +53,8 @@ export class Call implements Expr {
 
 /**
  * A structure definition.
- * @implements Expr
  */
-export class DefineStructure implements Expr {
+export class DefineStructure implements ExprToVisit {
   readonly name: string;
   readonly fields: string[];
 
@@ -66,13 +70,12 @@ export class DefineStructure implements Expr {
 
 /**
  * A variable definition.
- * @implements Expr
  */
-export class DefineVariable implements Expr {
+export class DefineVariable implements ExprToVisit {
   readonly identifier: Identifier;
-  readonly expression: Expr;
+  readonly expression: ExprToVisit;
 
-  constructor(identifier: Identifier, expr: Expr) { 
+  constructor(identifier: Identifier, expr: ExprToVisit) { 
     this.identifier = identifier;
     this.expression = expr;
    }
@@ -84,9 +87,8 @@ export class DefineVariable implements Expr {
 
 /**
  * An identifier.
- * @implements Expr
  */
-export class Identifier implements Expr {
+export class Identifier implements ExprToVisit {
   readonly name: Token
 
   constructor(name: Token) {
@@ -100,13 +102,12 @@ export class Identifier implements Expr {
 
 /**
  * A lambda expression.
- * @implements Expr
  */
-export class LambdaExpression implements Expr {
+export class LambdaExpression implements ExprToVisit {
   readonly names: Token[];
-  readonly body: Expr;
+  readonly body: ExprToVisit;
 
-  constructor(names: Token[], body: Expr) {
+  constructor(names: Token[], body: ExprToVisit) {
     this.names = names;
     this.body = body;
   }
@@ -118,9 +119,8 @@ export class LambdaExpression implements Expr {
 
 /**
  * A literal value, i.e. boolean, number, string.
- * @implements Expr
  */
-export class Literal implements Expr {
+export class Literal implements ExprToVisit {
   readonly value: RacketValue;
 
   constructor(value: RacketValue) {
@@ -129,5 +129,36 @@ export class Literal implements Expr {
 
   accept(visitor: ExprVisitor): any {
     return visitor.visitLiteral(this);
+  }
+}
+
+/**
+ * A quoted value, e.g. symbol or list.
+ */
+export class Quoted implements ExprToVisit {
+  readonly expression: Group | Identifier;
+
+  constructor(expr: Group | Identifier) {
+    this.expression = expr;
+  }
+
+  accept(visitor: ExprVisitor): any {
+    return visitor.visitQuoted(this);
+  }
+}
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Not Visited
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/**
+ * A group for `quote`.
+ */
+
+export class Group implements Expr {
+  readonly elements: Expr[];
+
+  constructor(exprs: Expr[]) {
+    this.elements = exprs;
   }
 }

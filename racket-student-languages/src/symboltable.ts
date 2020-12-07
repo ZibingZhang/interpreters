@@ -1,5 +1,3 @@
-import { RacketValueType } from "./values.js";
-
 /**
  * A nested mapping from names to value types.
  * 
@@ -69,5 +67,19 @@ export class SymbolTable {
       return value;
     }
   }
+}
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Racket Value Types
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+export enum RacketValueType {
+  BUILTIN_FUNCTION = 'BUILTIN_FUNCTION',
+  BUILTIN_LITERAL = 'BUILTIN_LITERAL',
+  FUNCTION = 'FUNCTION',
+  INSTANCE = 'INSTANCE',
+  PARAMETER = 'PARAMETER',
+  STRUCTURE = 'STRUCTURE',
+  VARIABLE = 'VARIABLE'
 }
 

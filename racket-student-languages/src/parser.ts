@@ -52,12 +52,23 @@ class TokenParser {
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private expr(): SExpr {
-    if (this.match(TokenType.DEFINE, TokenType.DEFINE_STRUCT, TokenType.IDENTIFIER, TokenType.LAMBDA)) {
+    if (this.match(
+        TokenType.DEFINE, 
+        TokenType.DEFINE_STRUCT, 
+        TokenType.IDENTIFIER, 
+        TokenType.LAMBDA
+      )) {
       return this.symbol();
-    } else if (this.match(TokenType.BOOLEAN, TokenType.NUMBER, TokenType.STRING)) {
+    } else if (this.match(
+        TokenType.BOOLEAN,
+        TokenType.NUMBER,
+        TokenType.STRING,
+      )) {
       return this.literal();
     } else if (this.match(TokenType.LEFT_PAREN)) {
       return this.list();
+    } else if (this.match(TokenType.QUOTE)) {
+      return this.quoted();
     } else if (this.match(TokenType.RIGHT_PAREN)) {
       throw new TokenParser.TokenParserError('unexpected `)`');
     } else {
@@ -77,6 +88,12 @@ class TokenParser {
 
   private literal(): SExprLiteral {
     return new SExprLiteral(this.previous());
+  }
+
+  private quoted(): SExprList {
+    let elements: SExpr[] = [new SExprSymbol(new Token(TokenType.IDENTIFIER, 'quote'))];
+    elements.push(this.expr());
+    return new SExprList(elements);
   }
 
   private symbol(): SExprSymbol {
