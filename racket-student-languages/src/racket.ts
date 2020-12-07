@@ -44,7 +44,7 @@ class Racket {
       this.output.display('The test passed!');
     } else if (passedTests === 2) {
       this.output.display('Both tests passed!');
-    } else {
+    } else if (passedTests >= 3) {
       this.output.display(`All ${passedTests} tests passed!`);
     }
   }

@@ -94,11 +94,11 @@ class SymStar extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketNumber {
     super.call(args);
     let numbers = assertListOfNumbers(this.name, args);
-    let total: RacketNumber = new RacketExactNumber(1n, 1n);
+    let result: RacketNumber = new RacketExactNumber(1n, 1n);
     for (let number of numbers) {
-      total = total.mul(number);
+      result = result.mul(number);
     }
-    return total;
+    return result;
   }
 }
 
@@ -118,11 +118,11 @@ class SymPlus extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketNumber {
     super.call(args);
     let numbers = assertListOfNumbers(this.name, args);
-    let total: RacketNumber = new RacketExactNumber(0n, 1n);
+    let result: RacketNumber = new RacketExactNumber(0n, 1n);
     for (let number of numbers) {
-      total = total.add(number);
+      result = result.add(number);
     }
-    return total;
+    return result;
   }
 }
 
@@ -145,11 +145,11 @@ class SymMinus extends RacketBuiltInFunction {
     if (args.length === 1) {
       return numbers[0].negated();
     } else {
-      let total: RacketNumber = numbers[0];
-      for (let i = 1; i < numbers.length; i++) {
-        total.sub(numbers[i]);
+      let result: RacketNumber = numbers[0];
+      for (let idx = 1; idx < numbers.length; idx++) {
+        result = result.sub(numbers[idx]);
       }
-      return total;
+      return result;
     }
   }
 }
@@ -170,11 +170,37 @@ class SymDivide extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketNumber {
     super.call(args);
     let numbers = assertListOfNumbers(this.name, args);
-    let total: RacketNumber = numbers[0];
-      for (let i = 1; i < numbers.length; i++) {
-        total.div(numbers[i]);
+    let result: RacketNumber = numbers[0];
+    for (let i = 1; i < numbers.length; i++) {
+      result = result.div(numbers[i]);
+    }
+    return result;
+  }
+}
+
+/* Signature:
+ * (= x y z ...) → boolean?
+ *    x : number
+ *    y : number
+ *    z : number
+ * Purpose Statement:
+ *    Compares numbers for equality.
+ */
+class SymEq extends RacketBuiltInFunction {
+  constructor() {
+    super('=', 2, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let numbers = assertListOfNumbers(this.name, args);
+    let first: RacketNumber = numbers[0];
+      for (let idx = 1; idx < numbers.length; idx++) {
+        if (!first.equals(numbers[idx])) {
+          return toRacketBoolean(false);
+        }
       }
-    return total;
+    return toRacketBoolean(true);
   }
 }
 
@@ -713,7 +739,7 @@ addBuiltinFunction(new SymMinus());
 addBuiltinFunction(new SymDivide());
 // addBuiltinFunction(new SymLt());
 // addBuiltinFunction(new SymLeq());
-// addBuiltinFunction(new SymEq());
+addBuiltinFunction(new SymEq());
 // addBuiltinFunction(new SymGt());
 // addBuiltinFunction(new SymGeq());
 addBuiltinFunction(new Abs());

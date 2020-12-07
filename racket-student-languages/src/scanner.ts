@@ -227,7 +227,7 @@ class Scanner {
     let result;
     if (/^(?:#e|#i)$/.exec(text) !== null) {
       this.error('no digits');
-    } else if ((result = /^(?:#e|#i)(?!\d|\+|-)(.).*/.exec(text)) !== null) {
+    } else if ((result = /^(?:#e|#i)(?!\d|\+|-|.).*/.exec(text)) !== null) {
       this.error(`bad digit \`${result[1]}\``);
     } else if (false) {
       // many more errors to check...
