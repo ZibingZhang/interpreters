@@ -32,6 +32,7 @@ export default class Resolver implements ir1.StmtVisitor {
   private evaluatingCallee: boolean = false;
   private inFunctionDefinition: boolean = false;
   private resolvingQuoted: boolean = false;
+  private testCases: ir1.Stmt[][] = [];
 
   constructor() {
     for (let [name, value] of BUILT_INS) {
@@ -49,7 +50,7 @@ export default class Resolver implements ir1.StmtVisitor {
    * Visitor
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  visitGroup(expr: ir1.Group): ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.Quoted {
+  visitGroup(expr: ir1.Group): undefined | ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.Quoted {
     let elements = expr.elements;
 
     if (this.resolvingQuoted) {
@@ -69,7 +70,16 @@ export default class Resolver implements ir1.StmtVisitor {
 
     if (callee instanceof ir1.Keyword) {
       let type = callee.token.type;
-      if (type === TokenType.DEFINE) {
+      if (type === TokenType.CHECK_EXPECT) {
+        if (!this.atTopLevel) {
+          reporter.resolver.nonTopLevelTest();
+        } else if (args.length !== 2) {
+          reporter.resolver.testCaseArityMismatch(args.length);
+        } else {
+          this.testCases.push([args[0], args[1]]);
+          return
+        }
+      } else if (type === TokenType.DEFINE) {
         let inFunctionDefinition = this.inFunctionDefinition;
         this.inFunctionDefinition = true;
         let result = this.define(args);
@@ -126,8 +136,13 @@ export default class Resolver implements ir1.StmtVisitor {
   }
 
   visitKeyword(expr: ir1.Keyword): never {
-    // return statement for typechecker
-    return reporter.resolver.missingOpenParenthesis(expr.token.type.valueOf());
+    if (expr.token.type === TokenType.CHECK_EXPECT) {
+      // return statement for typechecker
+      return reporter.resolver.testCaseArityMismatch(0);
+    } else {
+      // return statement for typechecker
+      return reporter.resolver.missingOpenParenthesis(expr.token.type.valueOf());
+    }
   }
 
   visitLiteral(expr: ir1.Literal): ir2.Literal {
@@ -138,20 +153,36 @@ export default class Resolver implements ir1.StmtVisitor {
    * Resolving
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  resolve(exprs: ir1.Stmt[]): ir2.StmtToVisit[] {
-    let values: ir2.StmtToVisit[] = [];
+  resolveBody(exprs: ir1.Stmt[]): ir2.StmtToVisit[] {
+    let statements: ir2.StmtToVisit[] = [];
     try {
       for (let expr of exprs) {
-        let value = this.evaluate(expr);
-        if (value === undefined) continue;
-        values.push(value);
+        let statement = this.evaluate(expr);
+        if (statement !== undefined){
+          statements.push(statement);
+        }
       }
     } catch (err) {
       if (err instanceof ResolverError) {
         racket.error(err.msg);
       } else throw err;
     }
-    return values;
+    return statements;
+  }
+
+  resolveTestCases(): ir2.TestCase[] {
+    this.atTopLevel = false;
+    let testCases: ir2.TestCase[] = [];
+    try {
+      for (let [actual, expected] of this.testCases) {
+        testCases.push(new ir2.TestCase(this.evaluate(actual), this.evaluate(expected)));
+      }
+    } catch (err) {
+      if (err instanceof ResolverError) {
+        racket.error(err.msg);
+      } else throw err;
+    }
+    return testCases;
   }
 
   private evaluate(expr: ir1.Stmt): ir2.StmtToVisit {

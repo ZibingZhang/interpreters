@@ -37,6 +37,21 @@ class ResolverErrorReporter {
     this.error("function call: expected a function after the open parenthesis, but nothing's there");
   }
 
+  nonTopLevelTest(): never {
+    this.error('check-expect: found a test that is not at the top level');
+  }
+
+  testCaseArityMismatch(arity: number): never {
+    let baseMsg = 'check-expect: ';
+    if (arity === 0) {
+      this.error(baseMsg + 'expects 2 arguments, but found none');
+    } else if (arity === 1) {
+      this.error(baseMsg + 'expects 2 arguments, but only found 1');
+    } else {
+      this.error(baseMsg + `expects only 2 arguments, but found ${arity}`);
+    }
+  }
+
   badCalleeType(callee: ir1.Stmt): never {
     let baseMsg = 'function call: expected a function after the open parenthesis, ';
     if (callee instanceof ir1.Literal) {

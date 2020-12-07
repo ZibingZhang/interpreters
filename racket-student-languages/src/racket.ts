@@ -20,25 +20,32 @@ class Racket {
     this.errors = [];
 
     let tokens = scanner.scan(text);
-
     if (this.report()) return;
 
     let ir1Exprs = parser.parse(tokens);
-
     if (this.report()) return;
 
     this.resolver = new Resolver();
-    let ir2Exprs = this.resolver.resolve(ir1Exprs);
-    
+    let ir2Exprs = this.resolver.resolveBody(ir1Exprs);
     if (this.report()) return;
     
     this.interpreter = new Interpreter();
-    let values = this.interpreter.interpret(ir2Exprs);
-
+    let values = this.interpreter.interpretBody(ir2Exprs);
     if (this.report()) return;
 
     for (let value of values) {
       this.output.display(value.toString());
+    }
+
+    let testCases = this.resolver.resolveTestCases();
+    let passedTests = this.interpreter.interpretTestCases(testCases);
+    if (this.report()) return;
+    if (passedTests === 1) {
+      this.output.display('The test passed!');
+    } else if (passedTests === 2) {
+      this.output.display('Both tests passed!');
+    } else {
+      this.output.display(`All ${passedTests} tests passed!`);
     }
   }
 
@@ -58,7 +65,7 @@ class Racket {
   private report(): boolean {
     if (!this.hasError) return false;
     for (let msg of this.errors) {
-      console.log(msg);
+      this.output.display(msg);
     }
     return true;
   }

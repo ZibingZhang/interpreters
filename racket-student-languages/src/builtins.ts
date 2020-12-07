@@ -49,6 +49,10 @@ export abstract class RacketBuiltInFunction implements RacketCallable {
     this.min = min;
     this.max = max;
   }
+
+  equals(other: RacketValue): boolean {
+    throw new Error('Method not implemented.');
+  }
   
   call(args: RacketValue[]): RacketValue {
     if (this.max === Infinity) {

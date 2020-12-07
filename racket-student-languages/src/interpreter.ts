@@ -93,6 +93,14 @@ export default class Interpreter implements ir2.StmtVisitor {
     }
   }
 
+  visitTestCase(expr: ir2.TestCase): void {
+    let actual = this.evaluate(expr.actual);
+    let expected = this.evaluate(expr.expected);
+    if (!actual.equals(expected)) {
+      this.error(`Actual value ${actual.toString()} differs from ${expected.toString()}, the expected value.`);
+    }
+  }
+
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
    * Interpreting
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
@@ -101,7 +109,7 @@ export default class Interpreter implements ir2.StmtVisitor {
     return expr.accept(this);
   }
 
-  interpret(exprs: ir2.StmtToVisit[]): RacketValue[] {
+  interpretBody(exprs: ir2.StmtToVisit[]): RacketValue[] {
     let values: RacketValue[] = [];
     try {
       for (let expr of exprs) {
@@ -123,6 +131,29 @@ export default class Interpreter implements ir2.StmtVisitor {
       }
     }
     return values;
+  }
+
+  interpretTestCases(testCases: ir2.TestCase[]): number {
+    let passedTests = 0;
+    try {
+      for (let testCase of testCases) {
+        this.visitTestCase(testCase);
+        passedTests++;
+      }
+    } catch (err) {
+      if (err instanceof Interpreter.InterpreterError) {
+        racket.error(err.msg);
+      } else if (err instanceof BuiltinFunctionError) {
+        racket.error(err.msg);
+      } else if (err instanceof DivByZero) {
+        racket.error('/: division by zero');
+      } else if (err instanceof StructureFunctionError) {
+        racket.error(err.msg);
+      } else {
+        throw err;
+      }
+    }
+    return passedTests;
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

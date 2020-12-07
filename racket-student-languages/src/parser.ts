@@ -1,5 +1,9 @@
 import * as ir1 from './ir1.js';
-import { Token, TokenType } from './tokens.js';
+import { 
+  KEYWORDS,
+  Token, 
+  TokenType 
+} from './tokens.js';
 import racket from './racket.js';
 import { 
   SExpr,
@@ -52,12 +56,7 @@ class TokenParser {
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private expr(): SExpr {
-    if (this.match(
-        TokenType.DEFINE, 
-        TokenType.DEFINE_STRUCT, 
-        TokenType.IDENTIFIER, 
-        TokenType.LAMBDA
-      )) {
+    if (this.match(TokenType.IDENTIFIER, ...KEYWORDS.values())) {
       return this.symbol();
     } else if (this.match(
         TokenType.BOOLEAN,
@@ -187,7 +186,7 @@ class Parser {
   }
 
   private symbol(sexpr: SExprSymbol): ir1.Identifier | ir1.Keyword {
-    if ([TokenType.DEFINE, TokenType.DEFINE_STRUCT, TokenType.LAMBDA].includes(sexpr.token.type)) {
+    if (Array.from(KEYWORDS.values()).includes(sexpr.token.type)) {
       return new ir1.Keyword(sexpr.token);
     } else {
       return new ir1.Identifier(sexpr.token);

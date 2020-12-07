@@ -7,6 +7,7 @@ export enum TokenType {
   LEFT_PAREN = '(',
   RIGHT_PAREN = ')',
 
+  CHECK_EXPECT = 'check-expect',
   DEFINE = 'define',
   DEFINE_STRUCT = 'define-struct',
   LAMBDA = 'lambda',
@@ -40,6 +41,7 @@ export class Token {
 }
 
 export const KEYWORDS = new Map([
+  ['check-expect', TokenType.CHECK_EXPECT],
   ['define', TokenType.DEFINE],
   ['define-struct', TokenType.DEFINE_STRUCT],
   ['lambda', TokenType.LAMBDA]

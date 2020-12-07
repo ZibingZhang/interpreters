@@ -18,6 +18,11 @@ export interface StmtToVisit extends Stmt {
 }
 
 /**
+ * An expression.
+ */
+export interface Expr extends StmtToVisit {}
+
+/**
  * A visitor for the Stmt interface.
  */
 export interface StmtVisitor {
@@ -28,6 +33,7 @@ export interface StmtVisitor {
   visitLiteral(expr: Literal): any;
   visitIdentifier(expr: Identifier): any;
   visitQuoted(expr: Quoted): any;
+  visitTestCase(expr: TestCase): any;
 }
 
 /* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -144,6 +150,23 @@ export class Quoted implements StmtToVisit {
 
   accept(visitor: StmtVisitor): any {
     return visitor.visitQuoted(this);
+  }
+}
+
+/**
+ * A test case.
+ */
+export class TestCase implements StmtToVisit {
+  readonly actual: Expr;
+  readonly expected: Expr
+
+  constructor(actual: Expr, expected: Expr) {
+    this.actual = actual;
+    this.expected = expected;
+  }
+
+  accept(visitor: StmtVisitor): any {
+    return visitor.visitTestCase(this);
   }
 }
 

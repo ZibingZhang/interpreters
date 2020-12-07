@@ -11,7 +11,13 @@ import * as utils from './utils.js';
  * Interfaces
  * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
 
-export interface RacketValue {}
+export interface RacketValue {
+  /**
+   * Does this value equal the given value.
+   * @param other the given value
+   */
+  equals(other: RacketValue): boolean;
+}
 
 /* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
  * Concrete Classes
@@ -37,6 +43,10 @@ export class RacketBoolean implements RacketValue {
     } else {
       return '#false';
     }
+  }
+
+  equals(other: RacketValue): boolean {
+    return isBoolean(other) && this.value === other.value;
   }
 }
 
@@ -64,11 +74,19 @@ export class RacketConstructedList implements RacketList {
   toString(): string {
     return `(cons ${this.first.toString()} ${this.rest.toString()})`;
   }
+
+  equals(other: RacketValue): boolean {
+    return isConstructed(other) && this.first.equals(other.first) && this.rest.equals(other.rest);
+  }
 }
 
 export class RacketEmptyList implements RacketList {
   toString(): string {
     return "'()";
+  }
+
+  equals(other: RacketValue): boolean {
+    return isEmpty(other);
   }
 }
 
@@ -91,6 +109,10 @@ export const RACKET_EMPTY_LIST = new RacketEmptyList();
   * A Racket number.
   */
 export abstract class RacketNumber implements RacketValue {
+  equals(other: RacketValue): boolean {
+    throw new Error('Method not implemented.');
+  }
+
   /**
    * Is this number zero?
    */
@@ -190,6 +212,10 @@ export class RacketExactNumber extends RacketRealNumber {
     return (Number(this.numerator) / Number(this.denominator)).toString();
   }
 
+  equals(other: RacketValue): boolean {
+    return isExact(other) && this.numerator === other.numerator && this.denominator === other.denominator;
+  }
+
   isZero(): boolean {
     return this.numerator === 0n;
   }
@@ -267,6 +293,10 @@ export class RacketInexactFraction extends RacketInexactNumber {
     else return '#i' + value.toString();
   }
 
+  equals(other: RacketValue): boolean {
+    return isInexactFraction(other) && this.numerator === other.numerator && this.denominator === other.denominator;
+  }
+
   isZero(): boolean {
     return this.numerator === 0n;
   }
@@ -342,6 +372,10 @@ export class RacketInexactFloat extends RacketInexactNumber {
     } else {
       return '#i' + this.value;
     }
+  }
+
+  equals(other: RacketValue): boolean {
+    return isInexactFloat(other) && this.value === other.value;
   }
 
   isZero(): boolean {
@@ -478,6 +512,10 @@ export class RacketString implements RacketValue {
   toString(): string {
     return JSON.stringify(this.value);
   }
+
+  equals(other: RacketValue): boolean {
+    return isString(other) && this.value === other.value;
+  }
 }
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -507,6 +545,10 @@ export class RacketLambda implements RacketCallable {
     this.body = body;
   }
 
+  equals(other: RacketValue): boolean {
+    throw new Error('Method not implemented.');
+  }
+
   call(args: RacketValue[]): RacketValue {
     let interpreter = racket.interpreter;
     let enclosing = interpreter.environment;
@@ -531,6 +573,10 @@ class RacketStructureFunction implements RacketCallable {
     this.function = func;
   }
 
+  equals(other: RacketValue): boolean {
+    throw new Error('Method not implemented.');
+  }
+
   call(args: RacketValue[]): RacketValue {
     return this.function(args);
   }
@@ -550,6 +596,10 @@ export class RacketStructure implements RacketValue {
   constructor(name: string, fields: string[]) {
     this.name = name;
     this.fields = fields;
+  }
+
+  equals(other: RacketValue): boolean {
+    throw new Error('Method not implemented.');
   }
 
   /**
@@ -638,6 +688,18 @@ export class RacketInstance implements RacketValue {
     }
     return string + ')';
   }
+
+  equals(other: RacketValue): boolean {
+    if (!isInstance(other)) {
+      return false;
+    }
+    for (let idx = 0; idx < this.values.length; idx++) {
+      if (!this.values[idx].equals(other.values[idx])) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -657,6 +719,10 @@ export class RacketSymbol implements RacketValue {
   toString(): string {
     return "'" + this.name;
   }
+
+  equals(other: RacketValue): boolean {
+    return isSymbol(other) && this.name === other.name;
+  }
 }
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -675,6 +741,14 @@ export function isComplex(object: any): object is RacketComplexNumber {
   return object instanceof RacketComplexNumber;
 }
 
+export function isConstructed(object: any): object is RacketConstructedList {
+  return object instanceof RacketConstructedList;
+}
+
+export function isEmpty(object: any): object is RacketEmptyList {
+  return object instanceof RacketEmptyList;
+}
+
 export function isExact(number: any): number is RacketExactNumber {
   return number instanceof RacketExactNumber;
 }
@@ -683,8 +757,16 @@ export function isInstance(object: any): object is RacketInstance {
   return object instanceof RacketInstance;
 }
 
-export function isInexact(object: any): object is RacketComplexNumber {
+export function isInexact(object: any): object is RacketInexactNumber {
   return object instanceof RacketInexactNumber;
+}
+
+function isInexactFloat(object: any): object is RacketInexactFloat {
+  return object instanceof RacketInexactFloat;
+}
+
+function isInexactFraction(object: any): object is RacketInexactFraction {
+  return object instanceof RacketInexactFraction;
 }
 
 export function isList(object: any): object is RacketList {
