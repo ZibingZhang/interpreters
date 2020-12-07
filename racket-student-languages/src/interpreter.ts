@@ -56,8 +56,10 @@ export default class Interpreter implements ir2.ExprVisitor {
     let fields = expr.fields;
     let structure = new RacketStructure(name, fields);
     let makeFunction = structure.makeFunction();
+    let isInstanceFunction = structure.isInstanceFunction();
     let getFunctions = structure.getFunctions();
-    this.environment.define(`make-${name}`, makeFunction);
+    this.environment.define('make-' + name, makeFunction);
+    this.environment.define(name + '?', isInstanceFunction);
     for (let i = 0; i < fields.length; i++) {
       this.environment.define(`${name}-${fields[i]}`, getFunctions[i]);
     }

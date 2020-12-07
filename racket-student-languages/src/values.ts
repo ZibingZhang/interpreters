@@ -56,7 +56,7 @@ export class RacketConstructedList implements RacketList {
   readonly first: RacketValue;
   readonly rest: RacketList;
 
-  constructor(first: RacketValue[], rest: RacketList) {
+  constructor(first: RacketValue, rest: RacketList) {
     this.first = first;
     this.rest = rest;
   }
@@ -68,7 +68,6 @@ export class RacketConstructedList implements RacketList {
 
 export class RacketEmptyList implements RacketList {
   toString(): string {
-    console.log('EMPTY')
     return "'()";
   }
 }
@@ -558,7 +557,7 @@ export class RacketStructure implements RacketValue {
    */
   makeFunction(): RacketStructureFunction {
     return new RacketStructureFunction((args: RacketValue[]): RacketInstance => {
-      let functionName = `make-${this.name}`;
+      let functionName = 'make-' + this.name;
       let expected = this.fields.length;
       let received = args.length;
       if (expected === 0 && received > 0) {
@@ -570,6 +569,23 @@ export class RacketStructure implements RacketValue {
       } else {
         return new RacketInstance(this, args);
       }
+    });
+  }
+
+  /**
+   * Produce a function that determines whether some value is an instance of this structure.
+   */
+  isInstanceFunction(): RacketStructureFunction {
+    return new RacketStructureFunction((args: RacketValue[]): RacketBoolean => {
+      let functionName = 'make-' + this.name;
+        if (args.length === 0) {
+          this.error(`${functionName}: expects 1 argument, but found none`);
+        } else if (args.length > 1) {
+          this.error(`${functionName}: expects only 1 argument, but found ${args.length}`);
+        } else {
+          let instance = args[0];
+          return instance instanceof RacketInstance && instance.type === this ? RACKET_TRUE : RACKET_FALSE;
+        }
     });
   }
 
@@ -632,7 +648,7 @@ export class RacketInstance implements RacketValue {
 * A Racket symbol.
 */
 export class RacketSymbol implements RacketValue {
-  private name: string;
+  readonly name: string;
 
   constructor(name: string) {
     this.name = name;
@@ -655,12 +671,20 @@ export function isBoolean(object: any): object is RacketBoolean {
   return object === RACKET_TRUE || object === RACKET_FALSE;
 }
 
-export function isExact(number: RacketNumber): number is RacketExactNumber {
+export function isComplex(object: any): object is RacketComplexNumber {
+  return object instanceof RacketComplexNumber;
+}
+
+export function isExact(number: any): number is RacketExactNumber {
   return number instanceof RacketExactNumber;
 }
 
 export function isInstance(object: any): object is RacketInstance {
   return object instanceof RacketInstance;
+}
+
+export function isInexact(object: any): object is RacketComplexNumber {
+  return object instanceof RacketInexactNumber;
 }
 
 export function isList(object: any): object is RacketList {
@@ -672,7 +696,12 @@ export function isNumber(object: any): object is RacketNumber {
   return object instanceof RacketNumber;
 }
 
-export function isReal(number: RacketValue): number is RacketRealNumber {
+export function isRational(object: any): object is RacketExactNumber | RacketInexactFraction {
+  return object instanceof RacketExactNumber
+    || object instanceof RacketInexactFraction;
+}
+
+export function isReal(number: any): number is RacketRealNumber {
   return number instanceof RacketRealNumber;
 }
 
@@ -684,9 +713,9 @@ export function isStructure(object: any): object is RacketStructure {
   return object instanceof RacketStructure;
 }
 
-// export function isSymbol(object: any): object is RacketSymbol {
-//   return object instanceof RacketSymbol;
-// }
+export function isSymbol(object: any): object is RacketSymbol {
+  return object instanceof RacketSymbol;
+}
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Helper Functions

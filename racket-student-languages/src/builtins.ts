@@ -2,18 +2,30 @@ import { BuiltinFunctionError } from './errors.js';
 import {
   isBoolean,
   isCallable,
+  isComplex,
   isExact,
+  isInexact,
+  isList,
   isNumber,
+  isRational,
   isReal,
+  isSymbol,
   RacketBoolean,
   RacketCallable,
+  RacketComplexNumber,
+  RacketConstructedList,
   RacketExactNumber, 
   RacketInexactFraction,
+  RacketList,
   RacketNumber, 
   RacketRealNumber, 
   RacketString, 
+  RacketStructure, 
+  RacketSymbol, 
   RacketValue,
-  RACKET_FALSE
+  RACKET_EMPTY_LIST,
+  RACKET_FALSE,
+  RACKET_TRUE
 } from './values.js';
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -61,6 +73,30 @@ export abstract class RacketBuiltInFunction implements RacketCallable {
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Numeric Functions
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/* Signature:
+ * (* x y z) → number
+ *    x : number
+ *    y : number
+ *    z : number
+ * Purpose Statement:
+ *    Multiplies all numbers.
+ */
+class SymStar extends RacketBuiltInFunction {
+  constructor() {
+    super('*', 2, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketNumber {
+    super.call(args);
+    let numbers = assertListOfNumbers(this.name, args);
+    let total: RacketNumber = new RacketExactNumber(1n, 1n);
+    for (let number of numbers) {
+      total = total.mul(number);
+    }
+    return total;
+  }
+}
 
 /* Signature:
  *    (+ x y z ...) → number
@@ -115,30 +151,6 @@ class SymDash extends RacketBuiltInFunction {
 }
 
 /* Signature:
- * (* x y z) → number
- *    x : number
- *    y : number
- *    z : number
- * Purpose Statement:
- *    Multiplies all numbers.
- */
-class SymStar extends RacketBuiltInFunction {
-  constructor() {
-    super('*', 2, Infinity);
-  }
-
-  call(args: RacketValue[]): RacketNumber {
-    super.call(args);
-    let numbers = assertListOfNumbers(this.name, args);
-    let total: RacketNumber = new RacketExactNumber(1n, 1n);
-    for (let number of numbers) {
-      total = total.mul(number);
-    }
-    return total;
-  }
-}
-
-/* Signature:
  * (/ x y z ...) → number
  *    x : number
  *    y : number
@@ -163,6 +175,121 @@ class SymSlash extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ * (abs x) → real
+ *    x : real
+ * Purpose Statement:
+ *    Determines the absolute value of a real number.
+ */
+class Abs extends RacketBuiltInFunction {
+  constructor() {
+    super('abs', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketNumber {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    let real = reals[0];
+    return real.isNegative() ? real.negated() : real;
+  }
+}
+
+/* Signature:
+ * (complex? x) → boolean?
+ *    x : real
+ * Purpose Statement:
+ *    Determines whether some value is complex.
+ */
+class ComplexHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('complex?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isComplex(args[0]));
+  }
+}
+
+/* Signature:
+ * (exact? x) → boolean?
+ *    x : number
+ * Purpose Statement:
+ *    Determines whether some number is exact.
+ */
+class ExactHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('exact?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    assertListOfNumbers(this.name, args);
+    return toRacketBoolean(isExact(args[0]));
+  }
+}
+
+/* Signature:
+ * (inexact? x) → boolean?
+ *    x : number
+ * Purpose Statement:
+ *    Determines whether some number is inexact.
+ */
+class InexactHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('inexact?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    assertListOfNumbers(this.name, args);
+    return toRacketBoolean(isInexact(args[0]));
+  }
+}
+
+/* Signature:
+ * (integer? x) → boolean?
+ *    x : any/c
+ * Purpose Statement:
+ *    Determines whether some number is an integer (exact or inexact).
+ */
+class IntegerHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('integer?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let value = args[0];
+    return toRacketBoolean(isRational(value) && value.denominator === 0n);
+  }
+}
+
+/* Signature:
+ * (make-rectangular x y) → number
+ *    x : real
+ *    y : real
+ * Purpose Statement:
+ *    Creates a complex number from a real and an imaginary part.
+ */
+class MakeRectangular extends RacketBuiltInFunction {
+  constructor() {
+    super('make-rectangular', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketNumber {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    let real = reals[0];
+    let imaginary = reals[1];
+    if (imaginary.isZero()) {
+      return real;
+    } else {
+      return new RacketComplexNumber(real, imaginary);
+    }
+  }
+}
+
+/* Signature:
  * (sgn x) → (union 1 #i1.0 0 #0.0 -1 #i-1.0)
  *    x : real
  * Purpose Statement:
@@ -175,18 +302,18 @@ class SymSlash extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketNumber {
     super.call(args);
-    let numbers = assertListOfReals(this.name, args);
-    let number = numbers[0];
-    if (number.isPositive()) {
-      return isExact(number) 
+    let reals = assertListOfReals(this.name, args);
+    let real = reals[0];
+    if (real.isPositive()) {
+      return isExact(real) 
         ? new RacketExactNumber(1n, 1n) 
         : new RacketInexactFraction(1n, 1n);
-    } else if (number.isNegative()) {
-      return isExact(number) 
+    } else if (real.isNegative()) {
+      return isExact(real) 
         ? new RacketExactNumber(-1n, 1n) 
         : new RacketInexactFraction(-1n, 1n);
     } else {
-      return isExact(number) 
+      return isExact(real) 
         ? new RacketExactNumber(0n, 1n) 
         : new RacketInexactFraction(0n, 1n);
     }
@@ -230,7 +357,7 @@ class BooleanSymEqualHuh extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketBoolean {
     super.call(args);
     let booleans = assertListOfBooleans(this.name, args);
-    return new RacketBoolean(booleans[0] === booleans[1]);
+    return toRacketBoolean(booleans[0] === booleans[1]);
   }
 }
 
@@ -247,7 +374,7 @@ class BooleanSymEqualHuh extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketBoolean {
     super.call(args);
-    return new RacketBoolean(isBoolean(args[0]));
+    return toRacketBoolean(isBoolean(args[0]));
   }
 }
 
@@ -264,7 +391,7 @@ class FalseHuh extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketBoolean {
     super.call(args);
-    return new RacketBoolean(isBoolean(args[0]) && args[0] === RACKET_FALSE);
+    return toRacketBoolean(isBoolean(args[0]) && args[0] === RACKET_FALSE);
   }
 }
 
@@ -282,7 +409,90 @@ class Not extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketBoolean {
     super.call(args);
     let booleans = assertListOfBooleans(this.name, args);
-    return new RacketBoolean(!booleans[0].value);
+    return toRacketBoolean(!booleans[0].value);
+  }
+}
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Symbol Functions
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/* Signature:
+ *  (symbol->string x) → string
+ *    x : symbol
+ * Purpose Statement:
+ *    Converts a symbol to a string.
+ */
+class SymbolToString extends RacketBuiltInFunction {
+  constructor() {
+    super('symbol->string', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketString {
+    super.call(args);
+    let symbols = assertListOfSymbols(this.name, args);
+    return new RacketString(symbols[0].toString().substr(1));
+  }
+}
+
+/* Signature:
+ *  (symbol=? x y) → boolean?
+ *    x : symbol
+ *    y : symbol
+ * Purpose Statement:
+ *    Determines whether two symbols are equal.
+ */
+class SymbolSymEqualHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('symbol=?', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let symbols = assertListOfSymbols(this.name, args);
+    return toRacketBoolean(symbols[0].name === symbols[1].name);
+  }
+}
+
+/* Signature:
+ *  (symbol? x) → boolean?
+ *    x : any/c
+ * Purpose Statement:
+ *    Determines whether some value is a symbol.
+ */
+class SymbolHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('symbol?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isSymbol(args[0]));
+  }
+}
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * List Functions
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/* Signature:
+ *  (cons x y) → list?
+ *    x : any/x
+ *    y : list?
+ * Purpose Statement:
+ *    Constructs a list.
+ */
+class Cons extends RacketBuiltInFunction {
+  constructor() {
+    super('cons', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    if (!isList(args[1])) {
+      error(`cons: second argument must be a list, but received ${args[0].toString()} and ${args[0].toString()}`);
+    }
+    return new RacketConstructedList(args[0], args[1]);
   }
 }
 
@@ -400,6 +610,28 @@ function assertListOfBooleans(name: string, args: RacketValue[]): RacketBoolean[
   return booleans;
 }
 
+/**
+ * Assert that the arguments are all symbols.
+ * @param name the name of the function
+ * @param args the received arguments
+ */
+function assertListOfSymbols(name: string, args: RacketValue[]): RacketSymbol[] {
+  let symbols: RacketSymbol[] = [];
+  args.forEach((arg, idx) => {
+    if (isCallable(arg)) {
+      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
+    } else if (!isSymbol(arg)) {
+      if (args.length === 1) {
+        error(`${name}: expects a symbol; given ${arg.toString()}`);
+      } else {
+        error(`${name}: expects a symbol as ${ordinal(idx + 1)} argument, given ${arg.toString()}`);
+      }
+    }
+    symbols.push(arg);
+  });
+  return symbols;
+}
+
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Error Handling
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
@@ -435,6 +667,14 @@ function ordinal(n: number): string {
   return n + "th";
 }
 
+/**
+ * Return the Racket equivalent of the boolean value.
+ * @param bool the boolean value
+ */
+function toRacketBoolean(bool: boolean) {
+  return bool ? RACKET_TRUE : RACKET_FALSE;
+}
+
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Creates a mapping of built in names to their corresponding racket values.
  * 
@@ -447,13 +687,32 @@ function addBuiltinFunction(fun: RacketBuiltInFunction): void {
   BUILT_INS.set(fun.name, fun);
 }
 
+function addBuiltInStructure(structure: RacketStructure): void {
+  let name = structure.name;
+  let fields = structure.fields;
+  let makeFunction = structure.makeFunction();
+  let isInstanceFunction = structure.isInstanceFunction();
+  let getFunctions = structure.getFunctions();
+  BUILT_INS.set('make-' + name, makeFunction);
+  BUILT_INS.set(name + '?', isInstanceFunction);
+  for (let i = 0; i < fields.length; i++) {
+    BUILT_INS.set(`${name}-${fields[i]}`, getFunctions[i]);
+  }
+}
+
 // Map from Name → Value
 let BUILT_INS: Map<string, RacketValue> = new Map();
 // Numeric Functions
+addBuiltinFunction(new SymStar());
 addBuiltinFunction(new SymPlus());
 addBuiltinFunction(new SymDash());
-addBuiltinFunction(new SymStar());
 addBuiltinFunction(new SymSlash());
+addBuiltinFunction(new Abs());
+addBuiltinFunction(new ComplexHuh());
+addBuiltinFunction(new ExactHuh());
+addBuiltinFunction(new InexactHuh());
+addBuiltinFunction(new IntegerHuh());
+addBuiltinFunction(new MakeRectangular());
 addBuiltinFunction(new Sgn());
 // Boolean Functions
 addBuiltinFunction(new BooleanToString());
@@ -461,7 +720,18 @@ addBuiltinFunction(new BooleanSymEqualHuh());
 addBuiltinFunction(new BooleanHuh());
 addBuiltinFunction(new FalseHuh());
 addBuiltinFunction(new Not());
+// Symbol Functions
+addBuiltinFunction(new SymbolToString());
+addBuiltinFunction(new SymbolSymEqualHuh());
+addBuiltinFunction(new SymbolHuh());
+// List Functions
+addBuiltinFunction(new Cons());
+// Structures
+addBuiltInStructure(new RacketStructure('posn', ['x', 'y']));
 // Literals
 BUILT_INS.set('e', new RacketInexactFraction(6121026514868073n, 2251799813685248n));
+BUILT_INS.set('empty', RACKET_EMPTY_LIST);
+BUILT_INS.set('null', RACKET_EMPTY_LIST);
+BUILT_INS.set('pi', new RacketInexactFraction(884279719003555n, 281474976710656n));
 // Export
 export default BUILT_INS;

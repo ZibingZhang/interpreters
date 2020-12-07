@@ -1,5 +1,4 @@
 import BUILT_INS from './builtins.js';
-import { RacketBuiltInFunction } from './builtins.js';
 import { 
   ResolverError, 
   UnreachableCode 
@@ -18,6 +17,8 @@ import {
   TokenType 
 } from './tokens.js';
 import { 
+  isCallable,
+  isList,
   isNumber
 } from './values.js';
 
@@ -34,9 +35,9 @@ export default class Resolver implements ir1.ExprVisitor {
 
   constructor() {
     for (let [name, value] of BUILT_INS) {
-      if (isNumber(value)) {
+      if (isNumber(value) || isList(value)) {
         this.symbolTable.define(name, RacketValueType.BUILTIN_LITERAL);
-      } else if (value instanceof RacketBuiltInFunction) {
+      } else if (isCallable(value)) {
         this.symbolTable.define(name, RacketValueType.BUILTIN_FUNCTION);
       } else {
         throw new Error('Unreachable code.');
@@ -244,6 +245,8 @@ export default class Resolver implements ir1.ExprVisitor {
         let structName = identifier.name.lexeme;
         if (this.symbolTable.contains(structName)) {
           reporter.resolver.duplicateName(structName);
+        } else if (this.symbolTable.contains(structName + '?')) {
+          reporter.resolver.duplicateName(structName + '?');
         } else if (this.symbolTable.contains(`make-${structName}`)) {
           reporter.resolver.duplicateName('make-' + structName);
         }
@@ -255,6 +258,7 @@ export default class Resolver implements ir1.ExprVisitor {
           }
         }
         this.symbolTable.define(structName, RacketValueType.STRUCTURE);
+        this.symbolTable.define(structName + '?', RacketValueType.FUNCTION, 1);
         this.symbolTable.define(`make-${structName}`, RacketValueType.FUNCTION, names.length);
         return new ir2.DefineStructure(structName, names);
       } else {
