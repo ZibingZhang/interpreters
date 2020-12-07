@@ -203,9 +203,9 @@ class Scanner {
   }
 
   private isBoolean(text: string): RacketBoolean | false {
-    if (['#T', '#t', '#true'].includes(text)) {
+    if (['#T', '#t', '#true', 'true'].includes(text)) {
       return RACKET_TRUE;
-    } else if (['#F','#f', '#false'].includes(text)) {
+    } else if (['#F','#f', '#false', 'false'].includes(text)) {
       return RACKET_FALSE;
     } else { 
       return false;
