@@ -57,6 +57,8 @@
 (define square-1 (lambda (n) (* n n)))
 (define (square-2 n) (* n n))
 (check-expect (square-1 #i1.23-56/78i) (square-2 #i1.23-56/78i))
+
+[check-expect {= (+ 1 2) 3} true]
 </div>
 <script type='module' src='/dist/main.js'></script>
 </body>

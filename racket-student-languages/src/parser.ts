@@ -11,6 +11,7 @@ import {
   SExprLiteral,
   SExprSymbol
 } from './sexpr.js';
+import { UnreachableCode } from './errors.js';
 
 /**
  * A parser for transforming tokens into S-expressions.
@@ -25,8 +26,15 @@ class TokenParser {
     }
   }
 
-  current: number = 0;
-  tokens: Token[] = [];
+  private readonly braceMap = new Map<TokenType, TokenType>([
+    [TokenType.OPEN, TokenType.CLOSE],
+    [TokenType.OPEN_BRACE, TokenType.CLOSE_BRACE],
+    [TokenType.OPEN_BRACKET, TokenType.CLOSE_BRACKET]
+  ]);
+  private openingStack: TokenType[] = [];
+
+  private current: number = 0;
+  private tokens: Token[] = [];
 
   /**
    * Produces an S-expression representation of the tokens.
@@ -43,7 +51,7 @@ class TokenParser {
       }
     } catch (err) {
       if (err instanceof TokenParser.TokenParserError) {
-        racket.error(err.msg);
+        racket.error('read-syntax: ' + err.msg);
       } else {
         throw err;
       }
@@ -58,29 +66,38 @@ class TokenParser {
   private expr(): SExpr {
     if (this.match(TokenType.IDENTIFIER, ...KEYWORDS.values())) {
       return this.symbol();
-    } else if (this.match(
-        TokenType.BOOLEAN,
-        TokenType.NUMBER,
-        TokenType.STRING,
-      )) {
+    } else if (this.match(TokenType.BOOLEAN, TokenType.NUMBER, TokenType.STRING)) {
       return this.literal();
-    } else if (this.match(TokenType.LEFT_PAREN)) {
+    } else if (this.match(TokenType.OPEN, TokenType.OPEN_BRACE, TokenType.OPEN_BRACKET)) {
       return this.list();
     } else if (this.match(TokenType.QUOTE)) {
       return this.quoted();
-    } else if (this.match(TokenType.RIGHT_PAREN)) {
-      throw new TokenParser.TokenParserError('unexpected `)`');
+    } else if (this.match(TokenType.CLOSE, TokenType.CLOSE_BRACE, TokenType.CLOSE_BRACKET)) {
+      if (this.openingStack.length === 0) {
+        this.error(`unexpected \`${this.previous().type}\``);
+      } else {
+        let preceding = this.openingStack[0];
+        let expected = this.braceMap.get(preceding);
+        let actual = this.previous().type;
+        this.error(`expected \`${expected}\` to close preceding \`${preceding}\`, but found instead\`${actual}\``);
+      }
     } else {
-      throw new Error('Unreachable code.');
+      throw new UnreachableCode();
     }
   }
 
   private list(): SExprList {
+    let opening = this.previous().type;
+    this.openingStack.unshift(opening);
+    let closing = this.braceMap.get(opening);
     let elements: SExpr[] = [];
-    while (this.peek().type !== TokenType.RIGHT_PAREN) {
-      if (this.isAtEnd()) throw new TokenParser.TokenParserError('expected a `)` to close `(`');
+    while (this.peek().type !== closing) {
+      if (this.isAtEnd()) {
+        this.error(`expected a \`${closing}\` to close \`${opening}\``);
+      }
       elements.push(this.expr());
     }
+    this.openingStack.shift();
     this.advance();
     return new SExprList(elements);
   }
@@ -135,6 +152,14 @@ class TokenParser {
   private previous(): Token {
     return this.tokens[this.current - 1];
   }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Error Handling
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  private error(msg: string): never {
+    throw new TokenParser.TokenParserError(msg);
+  }
 }
 
 /**
@@ -170,18 +195,22 @@ class Parser {
     } else if (sexpr instanceof SExprSymbol) {
       return this.symbol(sexpr);
     } else {
-      throw new Error('Unreachable code.');
+      throw new UnreachableCode();
     }
   }
 
   private group(sexpr: SExprList): ir1.Group {
     let elements = sexpr.elements;
-    if (elements.length === 0) return new ir1.Group([]);
+    if (elements.length === 0) {
+      return new ir1.Group([]);
+    }
     return new ir1.Group(elements.map(this.expr.bind(this)));
   }
 
   private literal(sexpr: SExprLiteral): ir1.Literal {
-    if (sexpr.token.value === undefined) throw new Error('Unreachable code.');
+    if (sexpr.token.value === undefined) {
+      throw new UnreachableCode();
+    };
     return new ir1.Literal(sexpr.token.value);
   }
 

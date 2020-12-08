@@ -4,8 +4,12 @@ import { RacketValue } from './values.js';
  * The type of a token.
  */
 export enum TokenType {
-  LEFT_PAREN = '(',
-  RIGHT_PAREN = ')',
+  OPEN = '(',
+  CLOSE = ')',
+  OPEN_BRACE = '{',
+  CLOSE_BRACE = '}',
+  OPEN_BRACKET = '[',
+  CLOSE_BRACKET = ']',
 
   CHECK_EXPECT = 'check-expect',
   DEFINE = 'define',

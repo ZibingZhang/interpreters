@@ -50,8 +50,12 @@ class Scanner {
   ]);
 
   private singleCharTokens = new Map<string, TokenType>([
-    ['(', TokenType.LEFT_PAREN],
-    [')', TokenType.RIGHT_PAREN],
+    ['(', TokenType.OPEN],
+    [')', TokenType.CLOSE],
+    ['{', TokenType.OPEN_BRACE],
+    ['}', TokenType.CLOSE_BRACE],
+    ['[', TokenType.OPEN_BRACKET],
+    [']', TokenType.CLOSE_BRACKET],
     ["'", TokenType.QUOTE]
   ]);
 
