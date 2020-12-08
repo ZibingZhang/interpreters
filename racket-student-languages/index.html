@@ -35,20 +35,28 @@
 </head>
 
 <body>
-  <div id='code' contenteditable='true' spellcheck='false'
->(define-struct coord (x y))
-(define g (lambda (y) (* y y)))
-(define (f x) (* x x))
-(define i +i)
+<div id='code' contenteditable='true' spellcheck='false'
+>(check-expect (= 0 -0 0# #e0 0+0i 0-0i 0.0 0. -.0 #i0) true)
+(check-expect (= +NaN.0 +NaN.0) false)
+(check-expect (= +inf.0 +inf.f (* -1 -inf.0) (* -1 -inf.f)) true)
+(check-expect (= 1/5 +1/5 0.2 (* -1 -1/5)) true)
 
-(define coord1 (make-coord 4 #f))
-(coord-x coord1)
-(coord-y coord1)
+(check-expect true true)
+(check-expect false false)
+(check-expect (boolean=? true false) false)
 
-(g #i2-i)
-(g #i2+i)
-(+ i -i)</div
-	>
-	<button id='run'>Run</button>
-	<script type='module' src='/dist/main.js'></script>
+(check-expect 'x 'x)
+(check-expect (symbol=? 'x 'X) false)
+
+(check-expect "hello" "hello")
+(check-expect (string=? "Hello" "hello") false)
+
+(define VAR-1 1)
+(check-expect VAR-1 1)
+
+(define square-1 (lambda (n) (* n n)))
+(define (square-2 n) (* n n))
+(check-expect (square-1 #i1.23-56/78i) (square-2 #i1.23-56/78i))
+</div>
+<script type='module' src='/dist/main.js'></script>
 </body>

@@ -1,15 +1,11 @@
 import racket from './racket.js';
 
 let code = document.getElementById('code');
-let run = document.getElementById('run');
 
-if (run !== null) {
-  run.onclick = () => {
-    console.clear();
-    const text: string = document.getElementById('code')?.innerText || '';
-    racket.run(text);
-  };
-  run.onclick(new MouseEvent(''));
+function run() {
+  console.clear();
+  const text: string = document.getElementById('code')?.innerText || '';
+  racket.run(text);
 }
 
 document.addEventListener('keydown', e => {
@@ -26,10 +22,11 @@ document.addEventListener('keydown', e => {
       break;
     }
     case 'r': {
-      run?.click(); 
+      run();
       break;
     }
   }
 });
 
+run();
 code?.focus();
