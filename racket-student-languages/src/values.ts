@@ -204,8 +204,16 @@ export class RacketExactNumber extends RacketRealNumber {
 
   constructor(numerator: bigint, denominator: bigint) {
     super(true);
-    this.numerator = numerator;
-    this.denominator = denominator;
+    if (numerator === 0n) {
+      this.numerator = 0n;
+      this.denominator = 1n;
+    } else {
+      let numeratorSgn = numerator > 0 ? 1n : -1n;
+      numerator *= numeratorSgn;
+      let gcd = utils.gcd(numerator, denominator);
+      this.numerator = numeratorSgn * numerator / gcd;
+      this.denominator = denominator / gcd;
+    }
   }
 
   toString(): string {
@@ -213,7 +221,7 @@ export class RacketExactNumber extends RacketRealNumber {
   }
 
   equals(other: RacketValue): boolean {
-    return isExact(other) && this.numerator === other.numerator && this.denominator === other.denominator;
+    return isRational(other) && this.numerator === other.numerator && this.denominator === other.denominator;
   }
 
   isZero(): boolean {
@@ -237,10 +245,7 @@ export class RacketExactNumber extends RacketRealNumber {
     if (other instanceof RacketExactNumber) {
       let numerator = this.numerator * other.denominator + this.denominator * other.numerator;
       let denominator = this.denominator * other.denominator;
-      let numeratorSign = numerator > 0 ? 1n : -1n;
-      numerator *= numeratorSign;
-      let gcd = utils.gcd(numerator, denominator);
-      return new RacketExactNumber(numeratorSign * numerator / gcd, denominator / gcd);
+      return new RacketExactNumber(numerator, denominator);
     } else {
       return other.add(this);
     }
@@ -251,10 +256,7 @@ export class RacketExactNumber extends RacketRealNumber {
       if (this.isZero() || other.isZero()) return new RacketExactNumber(0n, 1n);
       let numerator = this.numerator * other.numerator;
       let denominator = this.denominator * other.denominator;
-      let numeratorSign = numerator > 0 ? 1n : -1n;
-      numerator *= numeratorSign;
-      let gcd = utils.gcd(numerator, denominator);
-      return new RacketExactNumber(numeratorSign * numerator / gcd, denominator / gcd);
+      return new RacketExactNumber(numerator, denominator);
     } else {
       return other.mul(this);
     }
@@ -283,8 +285,16 @@ export class RacketInexactFraction extends RacketInexactNumber {
 
   constructor(numerator: bigint, denominator: bigint) {
     super(false);
-    this.numerator = numerator;
-    this.denominator = denominator;
+    if (numerator === 0n) {
+      this.numerator = 0n;
+      this.denominator = 1n;
+    } else {
+      let numeratorSgn = numerator > 0 ? 1n : -1n;
+      numerator *= numeratorSgn;
+      let gcd = utils.gcd(numerator, denominator);
+      this.numerator = numeratorSgn * numerator / gcd;
+      this.denominator = denominator / gcd;
+    }
   }
 
   toString(): string {
@@ -294,7 +304,7 @@ export class RacketInexactFraction extends RacketInexactNumber {
   }
 
   equals(other: RacketValue): boolean {
-    return isInexactFraction(other) && this.numerator === other.numerator && this.denominator === other.denominator;
+    return isRational(other) && this.numerator === other.numerator && this.denominator === other.denominator;
   }
 
   isZero(): boolean {
@@ -318,10 +328,7 @@ export class RacketInexactFraction extends RacketInexactNumber {
     if (other instanceof RacketExactNumber || other instanceof RacketInexactFraction) {
       let numerator = this.numerator * other.denominator + this.denominator * other.numerator;
       let denominator = this.denominator * other.denominator;
-      let numeratorSign = numerator > 0 ? 1n : -1n;
-      numerator *= numeratorSign;
-      let gcd = utils.gcd(numerator, denominator);
-      return new RacketInexactFraction(numeratorSign * numerator / gcd, denominator / gcd);
+      return new RacketInexactFraction(numerator, denominator);
     } else {
       return other.add(this);
     }
@@ -332,10 +339,7 @@ export class RacketInexactFraction extends RacketInexactNumber {
       if (this.isZero() || other.isZero()) return new RacketInexactFraction(0n, 1n);
       let numerator = this.numerator * other.numerator;
       let denominator = this.denominator * other.denominator;
-      let numeratorSign = numerator > 0 ? 1n : -1n;
-      numerator *= numeratorSign;
-      let gcd = utils.gcd(numerator, denominator);
-      return new RacketInexactFraction(numeratorSign * numerator / gcd, denominator / gcd);
+      return new RacketInexactFraction(numerator, denominator);
     } else {
       return other.mul(this);
     }
@@ -444,6 +448,10 @@ export class RacketComplexNumber extends RacketNumber {
       +  this.imaginary.toString().replace('#i', '') + 'i';
   }
 
+  equals(other: RacketValue): boolean {
+    return isComplex(other) && this.real.equals(other.real) && this.imaginary.equals(other.imaginary);
+  }
+
   isZero(): boolean {
     return this.real.isZero() && this.imaginary.isZero();
   }
@@ -503,7 +511,7 @@ export class RacketComplexNumber extends RacketNumber {
 * A Racket string.
 */
 export class RacketString implements RacketValue {
-  private value: string;
+  readonly value: string;
 
   constructor(value: string) {
     this.value = value;
@@ -567,7 +575,7 @@ export class RacketLambda implements RacketCallable {
 type RacketStructureCallback = (args: RacketValue[]) => RacketValue;
 
 class RacketStructureFunction implements RacketCallable {
-  function: RacketStructureCallback;
+  readonly function: RacketStructureCallback;
 
   constructor(func: RacketStructureCallback) {
     this.function = func;
@@ -590,8 +598,8 @@ class RacketStructureFunction implements RacketCallable {
   * A Racket structure.
   */
 export class RacketStructure implements RacketValue {
-  name: string;
-  fields: string[];
+  readonly name: string;
+  readonly fields: string[];
 
   constructor(name: string, fields: string[]) {
     this.name = name;
@@ -673,8 +681,8 @@ export class RacketStructure implements RacketValue {
  * An instance of a Racket structure.
  */
 export class RacketInstance implements RacketValue {
-  type: RacketStructure;
-  values: RacketValue[];
+  readonly type: RacketStructure;
+  readonly values: RacketValue[];
 
   constructor(type: RacketStructure, values: RacketValue[]) {
     this.type = type;

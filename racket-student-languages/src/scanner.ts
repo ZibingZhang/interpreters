@@ -219,8 +219,8 @@ class Scanner {
     if (text === '+NaN.f') return new RacketInexactFloat(NaN);
     if (text === '-NaN.f') return new RacketInexactFloat(NaN);
     if (text === '+inf.0') return new RacketInexactFloat(Infinity);
-    if (text === '+inf.0') return new RacketInexactFloat(Infinity);
-    if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
+    if (text === '-inf.0') return new RacketInexactFloat(-Infinity);
+    if (text === '+inf.f') return new RacketInexactFloat(+Infinity);
     if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
 
     // many forms that are not numbers, but will error out
@@ -303,7 +303,11 @@ class Scanner {
       throw new UnreachableCode();
     }
 
-    return new RacketComplexNumber(real, imaginary);
+    if (imaginary.isZero()) {
+      return real;
+    } else {
+      return new RacketComplexNumber(real, imaginary);
+    }
   }
 }
 
