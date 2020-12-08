@@ -773,10 +773,6 @@ function isInexactFloat(object: any): object is RacketInexactFloat {
   return object instanceof RacketInexactFloat;
 }
 
-function isInexactFraction(object: any): object is RacketInexactFraction {
-  return object instanceof RacketInexactFraction;
-}
-
 export function isList(object: any): object is RacketList {
   return object instanceof RacketConstructedList
     || object === RACKET_EMPTY_LIST;
