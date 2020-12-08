@@ -9,6 +9,7 @@ import {
   isNumber,
   isRational,
   isReal,
+  isString,
   isSymbol,
   RacketBoolean,
   RacketCallable,
@@ -33,6 +34,19 @@ import {
  * 
  * Signatures and purpose statements are taken directly from
  * https://docs.racket-lang.org/htdp-langs/beginner.html.
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * The Sections of this File (in order):
+ *    Abstract Classes
+ *    Numeric Functions
+ *    Boolean Functions
+ *    Symbol Functions
+ *    Character Functions
+ *    String Functions
+ *    Error Handling
+ *    Helper Functions
+ *    Mapping
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -480,7 +494,7 @@ class SymbolSymEqHuh extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketBoolean {
     super.call(args);
     let symbols = assertListOfSymbols(this.name, args);
-    return toRacketBoolean(symbols[0].name === symbols[1].name);
+    return toRacketBoolean(symbols[0].equals(symbols[1]));
   }
 }
 
@@ -525,6 +539,41 @@ class Cons extends RacketBuiltInFunction {
     return new RacketConstructedList(args[0], args[1]);
   }
 }
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Character Functions
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+* String Functions
+* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/* Signature:
+ *  (string=? s t) → boolean?
+ *    s : string
+ *    t : string
+ * Purpose Statement:
+ *    Determines whether all strings are equal, character for character.
+ */
+class StringSymEqHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('string=?', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let strings = assertListOfStrings(this.name, args);
+    return toRacketBoolean(strings[0].equals(strings[1]));
+  }
+}
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Image Functions
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+/* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+ * Miscellaneous Functions
+ * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Assertions
@@ -660,6 +709,28 @@ function assertListOfSymbols(name: string, args: RacketValue[]): RacketSymbol[] 
     symbols.push(arg);
   });
   return symbols;
+}
+
+/**
+ * Assert that the arguments are all strings.
+ * @param name the name of the function
+ * @param args the received arguments
+ */
+function assertListOfStrings(name: string, args: RacketValue[]): RacketString[] {
+  let strings: RacketString[] = [];
+  args.forEach((arg, idx) => {
+    if (isCallable(arg)) {
+      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
+    } else if (!isString(arg)) {
+      if (args.length === 1) {
+        error(`${name}: expects a string; given ${arg.toString()}`);
+      } else {
+        error(`${name}: expects a string as ${ordinal(idx + 1)} argument, given ${arg.toString()}`);
+      }
+    }
+    strings.push(arg);
+  });
+  return strings;
 }
 
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -908,7 +979,7 @@ addBuiltinFunction(new Cons());
 // addBuiltinFunction(new StringWhitespaceHuh());
 // addBuiltinFunction(new StringSymLeqHuh());
 // addBuiltinFunction(new StringSymLtHuh());
-// addBuiltinFunction(new StringSymEqHuh());
+addBuiltinFunction(new StringSymEqHuh());
 // addBuiltinFunction(new StringSymGeqHuh());
 // addBuiltinFunction(new StringSymGeHuh());
 // addBuiltinFunction(new StringHuh());
@@ -916,7 +987,7 @@ addBuiltinFunction(new Cons());
 /* Image Functions */
 // addBuiltinFunction(new ImageSymEqHuh());
 // addBuiltinFunction(new ImageHuh());
-/* Misc Functions */
+/* Miscellaneous Functions */
 // addBuiltinFunction(new SymEqSymTilda());
 // addBuiltinFunction(new Eof());
 // addBuiltinFunction(new EofObjectHuh());
