@@ -1,26 +1,36 @@
+import { UnreachableCode } from './errors.js';
 import {
-  DivByZero,
-  UnreachableCode
-} from './errors.js';
-import {
-  RacketBoolean,
   RacketComplexNumber,
   RacketExactNumber,
   RacketInexactFloat,
   RacketInexactFraction,
-  RacketNumber,
   RacketRealNumber,
   RacketString,
   RACKET_FALSE,
   RACKET_TRUE
 } from './values.js';
 import { 
-  KEYWORDS, 
+  KEYWORDS,
   Token, 
   TokenType 
 } from './tokens.js'
-import * as utils from './utils.js';
 import racket from './racket.js';
+
+enum State {
+  // Miscellaneous
+  TOP,
+  POUND,
+  // Numbers
+  EXPLICIT_EXACTNESS,
+  REAL_NUMERATOR,
+  REAL_DENOMINATOR,
+  REAL_DECIMAL,
+  // Strings
+  STRING,
+  ESCAPED_CHAR,
+  // Name
+  NAME
+}
 
 /**
  * A scanner for transforming text into tokens.
@@ -35,6 +45,8 @@ class Scanner {
     }
   }
 
+  private static NextLexeme = class extends Error {}
+
   private escapedChars = new Map<string, string>([
     ['a', '\a'],
     ['b', '\b'],
@@ -48,7 +60,6 @@ class Scanner {
     ["'", '\''],
     ['"', '\"']
   ]);
-
   private singleCharTokens = new Map<string, TokenType>([
     ['(', TokenType.OPEN],
     [')', TokenType.CLOSE],
@@ -59,119 +70,342 @@ class Scanner {
     ["'", TokenType.QUOTE]
   ]);
 
-  private whiteSpaceChars = new Set([' ', '\n', '\r', '\t']);
-
-  private text: string = '';
-  private current: number = 0;
-
   /**
    * Produces a tokenized representation of the text.
    * @param text the text which the tokens will represent
    */
   scan(text: string): Token[] {
-    this.text = text;
-    this.current = 0;
+    let groups = text.split(/(\s+|\(|\)|\[|\]|\{|\}|')/);
+    let lexeme = '';
     let tokens: Token[] = [];
-    let name = '';
+    let exact = true;
+    let explicitExactness = false;
+    let realNumerator = '';
+    let realDenominator = '';
 
-    try {
-      for (; !this.isAtEnd(); this.advance()) {
-        let char = text.charAt(this.current);
-        let type;
-        if (type = this.singleCharTokens.get(char)) {
-          name = this.addCurrentName(tokens, name);
-          tokens.push(new Token(type, char));
-        } else if (this.whiteSpaceChars.has(char)) {
-          name = this.addCurrentName(tokens, name);
-        } else if (char === '"') {
-          name = this.addCurrentName(tokens, name);
-          this.addString(tokens);
-        } else {
-          name += char;
+    for (let group of groups) {
+      let state = State.TOP;
+
+      try {
+        for (let char of group) {
+          switch (true) {
+            /* STATE  = TOP */
+            // LEXEME = .+
+            case state === State.TOP: {
+              lexeme = char;
+              switch (true) {
+                case /\s/.exec(char) !== null: {
+                  this.nextLexeme();
+                }
+                case this.singleCharTokens.has(char): {
+                  // @ts-ignore
+                  tokens.push(new Token(this.singleCharTokens.get(char), char));
+                  break;
+                }
+                case char === '#': {
+                  state = State.POUND;
+                  break;
+                }
+                case !isNaN(+char):
+                  state = State.REAL_NUMERATOR;
+                  explicitExactness = false;
+                  realNumerator = char;
+                  break;
+                case char === '"':
+                  state = State.STRING;
+                  break;
+                default: {
+                  state = State.NAME;
+                }
+              }
+              break;
+            }
+            
+            /* STATE  = POUND */
+            // LEXEME = #.*
+            case state === State.POUND: {
+              lexeme += char;
+              switch (true) {
+                // LEXEME = #t.*
+                case char === 't': {
+                  if (['#t', '#true'].includes(group)) {
+                    tokens.push(new Token(TokenType.BOOLEAN, group, RACKET_TRUE));
+                    this.nextLexeme();
+                  } else {
+                    this.error(`bad syntax \`${group.substring(0, 3)}\``);
+                  }
+                }
+                // LEXEME = #f.*
+                case char === 'f': {
+                  if (['#f', '#false'].includes(group)) {
+                    tokens.push(new Token(TokenType.BOOLEAN, group, RACKET_FALSE));
+                    this.nextLexeme();
+                  } else {
+                    this.error(`bad syntax \`${group.substring(0, 3)}\``);
+                  }
+                }
+                // LEXEME = #e.*
+                case char === 'e': {
+                  state = State.EXPLICIT_EXACTNESS;
+                  explicitExactness = true;
+                  exact = true;
+                  break;
+                }
+                // LEXEME = #i.*
+                case char === 'i': {
+                  state = State.EXPLICIT_EXACTNESS;
+                  explicitExactness = true;
+                  exact = false;
+                  break;
+                }
+                // LEXEME = #(?!t|f|e|i).*
+                default: {
+                  this.error(`bad syntax \`${group.substring(0, 2)}\``);
+                }
+              }
+              break;
+            }
+
+            /* STATE  = EXPLICIT EXACTNESS */
+            // LEXEME = #[e|i].*
+            case state === State.EXPLICIT_EXACTNESS: {
+              lexeme += char;
+              switch (true) {
+                case !isNaN(+char): {
+                  state = State.REAL_NUMERATOR;
+                  realNumerator = char;
+                  break;
+                }
+                default: {
+                  this.error(`bad digit \`${char}\``);
+                }
+              }
+              break;
+            }
+            
+            /* STATE  = REAL NUMERATOR */
+            // LEXEME = [#[e|i]]?\d.*
+            case state === State.REAL_NUMERATOR: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  realNumerator += char;
+                  break;
+                }
+                case char === '/': {
+                  state = State.REAL_DENOMINATOR;
+                  lexeme += char;
+                  realDenominator = '';
+                  break;
+                }
+                // case char === '+' || char == '-': {
+                //   lexeme += char;
+                //   break;
+                // }
+                case char === '"':
+                  state = State.STRING;
+                  tokens.push(this.makeInteger(lexeme, exact, realNumerator));
+                  lexeme = char;
+                  break;
+                default: {
+                  if (explicitExactness) {
+                    this.error(`bad digit \`${char}\``);
+                  } else {
+                    state = State.NAME;
+                    lexeme += char;
+                  }
+                }
+              }
+              break;
+            }
+
+            /* STATE  = REAL DENOMINATOR */
+            // LEXEME = [#[e|i]]?\d+/.*
+            case state === State.REAL_DENOMINATOR: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  realDenominator += char;
+                  break;
+                }
+                // case char === '+' || char == '-': {
+                //   lexeme += char;
+                //   break;
+                // }
+                case char === '"':
+                  state = State.STRING;
+                  if (realDenominator.length === 0) {
+                    if (explicitExactness) {
+                      this.error(`missing digits after \`/\` in ${lexeme}`);
+                    } else {
+                      tokens.push(this.makeName(lexeme));
+                    }
+                  } else {
+                    tokens.push(this.makeFraction(lexeme, exact, realDenominator, realDenominator));
+                  }
+                  lexeme = char;
+                  break;
+                default: {
+                  lexeme += char;
+                  if (explicitExactness) {
+                    this.error(`bad digit \`${char}\``);
+                  } else {
+                    state = State.NAME;
+                  }
+                }
+              }
+              break;
+            }
+
+            /* STATE  = STRING */
+            // LEXEME = ".*
+            case state === State.STRING: {
+              switch (true) {
+                case char === '\\': {
+                  state = State.ESCAPED_CHAR;
+                  break;
+                }
+                case char === '"':
+                  state = State.TOP;
+                  lexeme += char;
+                  tokens.push(new Token(TokenType.STRING, lexeme, new RacketString(lexeme.slice(1, -1))));
+                  break;
+                default: {
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = ESCAPED_CHAR */
+            // LEXEME = ".*\\.*
+            case state === State.ESCAPED_CHAR: {
+              switch (true) {
+                case this.escapedChars.has(char): {
+                  state = State.STRING;
+                  lexeme += this.escapedChars.get(char);
+                  break;
+                }
+                default: {
+                  this.error(`unknown escape sequence \`\\${char}\` in string`);
+                }
+              }
+              break;
+            }
+
+            /* STATE  = NAME */
+            case state === State.NAME: {
+              switch (true) {
+                case char === '"': {
+                  state = State.STRING;
+                  if (KEYWORDS.has(lexeme)) {
+                    // @ts-ignore
+                    tokens.push(new Token(KEYWORDS.get(lexeme), lexeme));
+                  } else {
+                    tokens.push(new Token(TokenType.IDENTIFIER, lexeme));
+                  }
+                  lexeme = char;
+                  break;
+                }
+                default: {
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+  
+            default: {
+              throw new UnreachableCode();
+            }
+          }
+        }
+
+        if (state === State.REAL_DENOMINATOR) {
+          if (realDenominator === '') {
+            if (explicitExactness) {
+              // LEXEME = #[e|i]\d+/
+              this.error(`missing digits after \`/\` in \`${lexeme}\``);
+            } else {
+              // LEXEME = \d+/
+              state = State.NAME;
+            }
+          }
+        }
+
+        switch (true) {
+          case state === State.TOP: {
+            break;
+          }
+          case state === State.POUND: {
+            this.error('bad syntax: `#`');
+          }
+          case state === State.EXPLICIT_EXACTNESS: {
+            this.error('no digits');
+          }
+          case state === State.REAL_NUMERATOR: {
+            tokens.push(this.makeInteger(lexeme, exact, realNumerator));
+            break;
+          }
+          case state === State.REAL_DENOMINATOR: {
+            tokens.push(this.makeFraction(lexeme, exact, realNumerator, realDenominator));
+            break;
+          }
+          case state === State.STRING:
+          case state === State.ESCAPED_CHAR: {
+            this.error('expected a closing `"`');
+          }
+          case state === State.NAME: {
+            tokens.push(this.makeName(lexeme));
+            break;
+          }
+          default: {
+            throw new UnreachableCode();
+          }
+        }
+      } catch (err) {
+        if (err instanceof Scanner.ScannerError) {
+          racket.error(err.msg);
+          return [];
+        } else if (!(err instanceof Scanner.NextLexeme)) {
+          throw err;
         }
       }
-      this.addCurrentName(tokens, name);
-      if (tokens.length > 0 
-          && tokens[tokens.length - 1] 
-          && tokens[tokens.length - 1].type === TokenType.QUOTE) {
-        this.error('expected an element for quoting "\'", found end-of-file');
-      }
-      tokens.push(new Token(TokenType.EOF, ''));
-      return tokens;
-    } catch (err) {
-      if (err instanceof DivByZero) {
-        racket.error(`division by zero in \`${name}\``);
-      } else if (err instanceof Scanner.ScannerError) {
-        racket.error(err.msg);
-      } else {
-        throw err;
-      }
     }
+
+    tokens.push(new Token(TokenType.EOF, ''));
     return tokens;
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-   * General Parsing Helper Functions
+   * Constructing Tokens
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
-
-  private advance(): void {
-    if (!this.isAtEnd()) {
-      this.current += 1;
-    }
+  
+  private makeFraction(lexeme: string, exact: boolean, numeratorStr: string, denominatorStr: string): Token {
+  let numerator = BigInt(numeratorStr)
+  let denominator = BigInt(denominatorStr);
+  if (denominator === 0n) {
+    this.error(`division by zero in \`${numerator}/${denominator}\``);
+  }
+  let value;
+  if (exact) {
+    value = new RacketExactNumber(numerator, denominator);
+  } else {
+    value = new RacketInexactFraction(numerator, denominator);
+  }
+  return new Token(TokenType.NUMBER, lexeme, value);
   }
 
-  private isAtEnd(): boolean {
-    return this.peek() === false;
+  private makeInteger(lexeme: string, exact: boolean, integerStr: string): Token {
+  return this.makeFraction(lexeme, exact, integerStr, '1');
   }
 
-  private peek(): string | false {
-    if (this.text.length === this.current) {
-      return false;
+  private makeName(lexeme: string): Token {
+    if (KEYWORDS.has(lexeme)) {
+      // @ts-ignore
+      return new Token(KEYWORDS.get(lexeme), lexeme);
     } else {
-      return this.text[this.current];
+      return new Token(TokenType.IDENTIFIER, lexeme);
     }
-  }
-
-  private previous(): string {
-    return this.text[this.current - 1];
-  }
-
-  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-   * Adding Onto Token List
-   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
-
-  private addCurrentName(tokens: Token[], name: string): '' {
-    if (name !== '') {
-      tokens.push(this.lexemeToToken(name))
-    };
-    return '';
-  }
-
-  private addString(tokens: Token[]): void {
-    this.advance();
-    let string = '';
-    while (this.peek() != '"' && !this.isAtEnd()) {
-      this.advance();
-      let char = this.previous();
-      if (char === '\\') {
-        if (this.isAtEnd()) {
-          this.error('expected a closing `"`');
-        }
-        this.advance();
-        let escapedChar = this.escapedChars.get(this.previous());
-        if (escapedChar !== undefined) {
-          string += escapedChar;
-        } else {
-          this.error(`unknown escape sequence \`\\${this.previous()}\` in string`);
-        }
-      } else {
-        string += char;
-      }
-    }
-    if (this.peek() === false) {
-      this.error('expected a closing `"`');
-    }
-    tokens.push(new Token(TokenType.STRING, string, new RacketString(string)));
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -179,139 +413,11 @@ class Scanner {
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   private error(msg: string): never {
-    throw new Scanner.ScannerError(msg);
+    throw new Scanner.ScannerError(`read-syntax: ${msg}`);
   }
 
-  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-   * Variables and Literal Values
-   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
-
-  private lexemeToToken(text: string): Token {
-    // check for keywords
-    let type = KEYWORDS.get(text);
-    if (type !== undefined) {
-      return new Token(type, text);
-    }
-    // check for booleans
-    let value: RacketBoolean | RacketNumber | false = this.isBoolean(text);
-    if (value !== false) {
-      return new Token(TokenType.BOOLEAN, text, value);
-    }
-    // check for numbers
-    value = this.isNumber(text);
-    if (value !== false) {
-      return new Token(TokenType.NUMBER, text, value);
-    }
-    // everything else is an identifier
-    return new Token(TokenType.IDENTIFIER, text);
-  }
-
-  private isBoolean(text: string): RacketBoolean | false {
-    if (['#T', '#t', '#true', 'true'].includes(text)) {
-      return RACKET_TRUE;
-    } else if (['#F','#f', '#false', 'false'].includes(text)) {
-      return RACKET_FALSE;
-    } else { 
-      return false;
-    }
-  }
-
-  private isNumber(text: string): RacketNumber | false {
-    // special values
-    if (text === '+NaN.0') return new RacketInexactFloat(NaN);
-    if (text === '-NaN.0') return new RacketInexactFloat(NaN);
-    if (text === '+NaN.f') return new RacketInexactFloat(NaN);
-    if (text === '-NaN.f') return new RacketInexactFloat(NaN);
-    if (text === '+inf.0') return new RacketInexactFloat(Infinity);
-    if (text === '-inf.0') return new RacketInexactFloat(-Infinity);
-    if (text === '+inf.f') return new RacketInexactFloat(+Infinity);
-    if (text === '-inf.f') return new RacketInexactFloat(-Infinity);
-
-    // many forms that are not numbers, but will error out
-    let result;
-    if (/^(?:#e|#i)$/.exec(text) !== null) {
-      this.error('no digits');
-    } else if ((result = /^(?:#e|#i)(?!\d|\+|-|.).*/.exec(text)) !== null) {
-      this.error(`bad digit \`${result[1]}\``);
-    } else if (false) {
-      // many more errors to check...
-    }
-
-    // general regex for numbers
-    let match = /^(#e|#i)?(\+|-)?(\d+#*)?(?:(\/|\.)(\d+#*)?)?(?:(\+|-)(\d+#*)?(?:(\/|\.)(\d+#*)?)?i)?$/.exec(text);
-    if (match === null) return false;
-    
-    let isExact = match[1] !== '#i';
-    let realSignStr: string | undefined = match[2];
-    let realNumerator = BigInt(match[3]?.replace(/#/g, '0') || -1n);
-    let realDecimalOrFraction: string | undefined = match[4];
-    let realRest = BigInt(match[5]?.replace(/#/g, '0') || -1n);
-    let imaginarySignStr: string | undefined = match[6];
-    let imaginaryNumerator = BigInt(match[7]?.replace(/#/g, '0') || -1n);
-    let imaginaryDecimalOrFraction: string | undefined = match[8];
-    let imaginaryRest = BigInt(match[9]?.replace(/#/g, '0') || -1n);
-    let hasImaginary = imaginarySignStr !== undefined;
-
-    if (realSignStr !== undefined && realNumerator === -1n && realRest === -1n) return false;
-    if (realDecimalOrFraction !== undefined && realNumerator === -1n && realRest === -1n) return false;
-    if (realDecimalOrFraction === '/' && (realNumerator === -1n || realRest === -1n)) return false;
-    if (hasImaginary && imaginaryDecimalOrFraction !== undefined && imaginaryNumerator === -1n && imaginaryRest === -1n) return false;
-    if (imaginaryDecimalOrFraction !== undefined && imaginaryNumerator === -1n && imaginaryRest === -1n) return false;
-    if (imaginaryDecimalOrFraction === '/' && (imaginaryNumerator === -1n || imaginaryRest === -1n)) return false;
-
-    if (realNumerator === -1n) {
-      realNumerator = 0n;
-    }
-
-    let realSign = realSignStr !== '-' ? 1n : -1n;
-    let imaginarySign = imaginarySignStr !== '-' ? 1n : -1n;
-    if (realDecimalOrFraction === '.' && realRest === -1n) realDecimalOrFraction = undefined; 
-    if (imaginaryDecimalOrFraction === '.' && imaginaryRest === -1n) imaginaryDecimalOrFraction = undefined; 
-
-    let real: RacketRealNumber;
-    let imaginary: RacketRealNumber;
-
-    if (realDecimalOrFraction === undefined) {
-      if (isExact) real = new RacketExactNumber(realSign * realNumerator, 1n);
-      else real = new RacketInexactFraction(realSign * realNumerator, 1n);
-    } else if (realDecimalOrFraction === '.') {
-      let denominator = 10n ** BigInt(realRest.toString().length);
-      if (isExact) real = new RacketExactNumber(realSign * (realNumerator * denominator + realRest), denominator);
-      else real = new RacketInexactFraction(realSign * (realNumerator * denominator + realRest), denominator);
-    } else if (realDecimalOrFraction === '/') {
-      let gcd = utils.gcd(realNumerator, realRest);
-      if (isExact) real = new RacketExactNumber(realSign * realNumerator / gcd, realRest / gcd);
-      else real = new RacketInexactFraction(realSign * realNumerator / gcd, realRest / gcd);
-    } else {
-      throw new UnreachableCode();
-    }
-
-    if (!hasImaginary) return real;
-
-    if (imaginaryNumerator === -1n && imaginaryRest === -1n) {
-      imaginaryNumerator = 1n;
-    }
-
-    if (imaginaryDecimalOrFraction === undefined) {
-      if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator, 1n);
-      else imaginary = new RacketInexactFraction(imaginarySign * imaginaryNumerator, 1n);
-    } else if (imaginaryDecimalOrFraction === '.') {
-      let denominator = 10n ** BigInt(imaginaryRest.toString().length);
-      if (isExact) imaginary = new RacketExactNumber(imaginarySign * (imaginaryNumerator * denominator + imaginaryRest), denominator);
-      else imaginary = new RacketInexactFraction(imaginarySign * (imaginaryNumerator * denominator + imaginaryRest), denominator);
-    } else if (imaginaryDecimalOrFraction === '/') {
-      let gcd = utils.gcd(realNumerator, realRest);
-      if (isExact) imaginary = new RacketExactNumber(imaginarySign * imaginaryNumerator / gcd, imaginaryRest / gcd);
-      else imaginary = new RacketInexactFraction(imaginarySign * imaginaryNumerator / gcd, imaginaryRest / gcd);
-    } else {
-      throw new UnreachableCode();
-    }
-
-    if (imaginary.isZero()) {
-      return real;
-    } else {
-      return new RacketComplexNumber(real, imaginary);
-    }
+  private nextLexeme(): never {
+    throw new Scanner.NextLexeme();
   }
 }
 
