@@ -79,7 +79,7 @@ class TokenParser {
         let preceding = this.openingStack[0];
         let expected = this.braceMap.get(preceding);
         let actual = this.previous().type;
-        this.error(`expected \`${expected}\` to close preceding \`${preceding}\`, but found instead\`${actual}\``);
+        this.error(`expected \`${expected}\` to close preceding \`${preceding}\`, but found instead \`${actual}\``);
       }
     } else {
       throw new UnreachableCode();
