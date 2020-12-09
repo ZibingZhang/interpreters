@@ -3,7 +3,6 @@ import {
   RacketComplexNumber,
   RacketExactNumber,
   RacketInexactFloat,
-  RacketInexactFraction,
   RacketRealNumber,
   RacketString,
   RACKET_FALSE,
@@ -21,14 +20,27 @@ enum State {
   TOP,
   POUND,
   // Numbers
+  SIGNED_NUMERATOR,
+  SIGNED_DENOMINATOR,
+  SIGNED_DECIMAL,
   REAL_NUMERATOR,
   REAL_DENOMINATOR,
   REAL_DECIMAL,
+  IMAGINARY_NUMERATOR,
+  IMAGINARY_DENOMINATOR,
+  IMAGINARY_DECIMAL,
+  COMPLEX_END,
   // Strings
   STRING,
   ESCAPED_CHAR,
   // Name
   NAME
+}
+
+enum NumberType {
+  INTEGER,
+  FRACTION,
+  DECIMAL
 }
 
 /**
@@ -77,8 +89,18 @@ class Scanner {
     let groups = text.split(/(\s+|\(|\)|\[|\]|\{|\}|')/);
     let lexeme = '';
     let tokens: Token[] = [];
+    let signedNumerator = '';
+    let signedDenominator = '';
+    let signedDecimal = '';
+    let signedType = NumberType.INTEGER;
     let realNumerator = '';
     let realDenominator = '';
+    let realDecimal = '';
+    let realType = NumberType.INTEGER;
+    let imaginaryNumerator = '';
+    let imaginaryDenominator = '';
+    let imaginaryDecimal = '';
+    let imaginaryType = NumberType.INTEGER;
 
     for (let group of groups) {
       let state = State.TOP;
@@ -103,13 +125,32 @@ class Scanner {
                   state = State.POUND;
                   break;
                 }
-                case !isNaN(+char):
+                case !isNaN(+char): {
                   state = State.REAL_NUMERATOR;
+                  realType = NumberType.INTEGER;
                   realNumerator = char;
                   break;
-                case char === '"':
+                }
+                case char === '+':
+                case char === '-': {
+                  state = State.SIGNED_NUMERATOR;
+                  signedType = NumberType.INTEGER;
+                  realType = NumberType.INTEGER;
+                  realNumerator = '';
+                  signedNumerator = char;
+                  break;
+                }
+                case char === '.': {
+                  state = State.REAL_DECIMAL;
+                  realType = NumberType.DECIMAL;
+                  realNumerator = '';
+                  realDecimal = '';
+                  break;
+                }
+                case char === '"': {
                   state = State.STRING;
                   break;
+                }
                 default: {
                   state = State.NAME;
                 }
@@ -145,6 +186,125 @@ class Scanner {
                   this.error(`bad syntax \`${group.substring(0, 2)}\``);
                 }
               }
+            }
+
+            /* STATE  = SIGNED NUMERATOR */
+            // LEXEME = [+|-].*
+            case state === State.SIGNED_NUMERATOR: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  signedNumerator += char;
+                  break;
+                }
+                case char === '/': {
+                  lexeme += char;
+                  if (signedNumerator === '') {
+                    state = State.NAME;
+                  } else {
+                    state = State.SIGNED_DENOMINATOR;
+                    signedType = NumberType.FRACTION;
+                    signedDenominator = '';
+                  }
+                  break;
+                }
+                case char === '.': {
+                  state = State.SIGNED_DECIMAL;
+                  lexeme += char;
+                  signedType = NumberType.DECIMAL;
+                  signedDecimal = '';
+                  break;
+                }
+                case char === 'i':
+                  state = State.COMPLEX_END;
+                  lexeme += char;
+                  signedNumerator = signedNumerator;
+                  signedType = signedType;
+                  break;
+                case char === '"':
+                  state = State.STRING;
+                  tokens.push(this.makeInteger(lexeme, signedNumerator));
+                  lexeme = char;
+                  break;
+                default: {
+                  state = State.NAME;
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = SIGNED DENOMINATOR */
+            // LEXEME = [+|-]\d+/.*
+            case state === State.SIGNED_DENOMINATOR: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  signedDenominator += char;
+                  break;
+                }
+                case char === 'i':
+                  lexeme += char;
+                  if (signedDenominator === '') {
+                    state = State.NAME;
+                  } else {
+                    state = State.COMPLEX_END;
+                    imaginaryNumerator = signedNumerator;
+                    imaginaryDenominator = signedDenominator;
+                    imaginaryType = signedType;
+                  }
+                  break;
+                case char === '"':
+                  state = State.STRING;
+                  if (signedDenominator === '') {
+                    tokens.push(this.makeName(lexeme));
+                  } else {
+                    tokens.push(this.makeFraction(lexeme, signedNumerator, signedDenominator));
+                  }
+                  lexeme = char;
+                  break;
+                default: {
+                  state = State.NAME;
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = SIGNED DECIMAL */
+            // LEXEME = [+|-]\d*/.*
+            case state === State.SIGNED_DECIMAL: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  signedDecimal += char;
+                  break;
+                }
+                case char === 'i':
+                  lexeme += char;
+                  if (signedDenominator === '') {
+                    state = State.NAME;
+                  } else {
+                    state = State.COMPLEX_END;
+                    imaginaryNumerator = signedNumerator;
+                    imaginaryDenominator = signedDenominator;
+                    imaginaryType = signedType;
+                  }
+                  break;
+                case char === '"':
+                  state = State.STRING;
+                  if (signedDenominator === '') {
+                    tokens.push(this.makeName(lexeme));
+                  } else {
+                    tokens.push(this.makeDecimal(lexeme, signedNumerator, signedDecimal));
+                  }
+                  lexeme = char;
+                  break;
+                default: {
+                  state = State.NAME;
+                  lexeme += char;
+                }
+              }
               break;
             }
             
@@ -160,13 +320,25 @@ class Scanner {
                 case char === '/': {
                   state = State.REAL_DENOMINATOR;
                   lexeme += char;
+                  realType = NumberType.FRACTION;
                   realDenominator = '';
                   break;
                 }
-                // case char === '+' || char == '-': {
-                //   lexeme += char;
-                //   break;
-                // }
+                case char === '.': {
+                  state = State.REAL_DECIMAL;
+                  lexeme += char;
+                  realType = NumberType.DECIMAL;
+                  realDecimal = '';
+                  break;
+                }
+                case char === '+':
+                case char === '-': {
+                  state = State.IMAGINARY_NUMERATOR;
+                  imaginaryType = NumberType.INTEGER;
+                  lexeme += char;
+                  imaginaryNumerator = char;
+                  break;
+                }
                 case char === '"':
                   state = State.STRING;
                   tokens.push(this.makeInteger(lexeme, realNumerator));
@@ -181,7 +353,7 @@ class Scanner {
             }
 
             /* STATE  = REAL DENOMINATOR */
-            // LEXEME = \d+/.*
+            // LEXEME = \d*/.*
             case state === State.REAL_DENOMINATOR: {
               switch (true) {
                 case !isNaN(+char): {
@@ -189,13 +361,16 @@ class Scanner {
                   realDenominator += char;
                   break;
                 }
-                // case char === '+' || char == '-': {
-                //   lexeme += char;
-                //   break;
-                // }
+                case char === '+':
+                case char === '-': {
+                  state = State.IMAGINARY_NUMERATOR;
+                  lexeme += char;
+                  imaginaryNumerator = char;
+                  break;
+                }
                 case char === '"':
                   state = State.STRING;
-                  if (realDenominator.length === 0) {
+                  if (realDenominator === '') {
                     tokens.push(this.makeName(lexeme));
                   } else {
                     tokens.push(this.makeFraction(lexeme, realNumerator, realDenominator));
@@ -203,8 +378,191 @@ class Scanner {
                   lexeme = char;
                   break;
                 default: {
-                  lexeme += char;
                   state = State.NAME;
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = REAL DECIMAL */
+            // LEXEME = \d+\..*
+            case state === State.REAL_DECIMAL: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  realDecimal += char;
+                  break;
+                }
+                case char === '+':
+                case char === '-': {
+                  state = State.IMAGINARY_NUMERATOR;
+                  lexeme += char;
+                  imaginaryNumerator = char;
+                  break;
+                }
+                case char === '"':
+                  state = State.STRING;
+                  if (realDecimal === '') {
+                    tokens.push(this.makeName(lexeme));
+                  } else {
+                    tokens.push(this.makeDecimal(lexeme, realNumerator, realDecimal));
+                  }
+                  lexeme = char;
+                  break;
+                default: {
+                  state = State.NAME;
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = IMAGINARY NUMERATOR */
+            // LEXEME = .*[+|-].*
+            case state === State.IMAGINARY_NUMERATOR: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  imaginaryNumerator += char;
+                  break;
+                }
+                case char === '/': {
+                  lexeme += char;
+                  if (imaginaryNumerator.length === 1) {
+                    state = State.NAME;
+                  } else {
+                    state = State.IMAGINARY_DENOMINATOR;
+                    imaginaryType = NumberType.FRACTION;
+                    imaginaryDenominator = '';
+                  }
+                  break;
+                }
+                case char === '.': {
+                  state = State.IMAGINARY_DECIMAL;
+                  lexeme += char;
+                  imaginaryType = NumberType.DECIMAL;
+                  imaginaryDecimal = '';
+                  break;
+                }
+                case char === 'i':
+                  state = State.COMPLEX_END;
+                  lexeme += char;
+                  break;
+                case char === '"':
+                  state = State.STRING;
+                  tokens.push(this.makeComplex(
+                    lexeme,
+                    realType,
+                    realNumerator,
+                    realType === NumberType.DECIMAL ? realDecimal : realDenominator,
+                    imaginaryType,
+                    imaginaryNumerator,
+                    ''
+                  ));
+                  lexeme = char;
+                  break;
+                default: {
+                  state = State.NAME;
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = IMAGINARY DENOMINATOR */
+            // LEXEME = .*[+|-].*/.*
+            case state === State.IMAGINARY_DENOMINATOR: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  imaginaryDenominator += char;
+                  break;
+                }
+                case char === 'i':
+                  state = State.COMPLEX_END;
+                  lexeme += char;
+                  break;
+                case char === '"':
+                  state = State.STRING;
+                  tokens.push(this.makeComplex(
+                    lexeme,
+                    realType,
+                    realNumerator,
+                    realType === NumberType.DECIMAL ? realDecimal : realDenominator,
+                    imaginaryType,
+                    imaginaryNumerator,
+                    imaginaryType === NumberType.DECIMAL ? imaginaryDecimal : imaginaryDenominator
+                  ));
+                  lexeme = char;
+                  break;
+                default: {
+                  state = State.NAME;
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = IMAGINARY DECIMAL */
+            // LEXEME = .*[+|-].*\..*
+            case state === State.IMAGINARY_DECIMAL: {
+              switch (true) {
+                case !isNaN(+char): {
+                  lexeme += char;
+                  imaginaryDecimal += char;
+                  break;
+                }
+                case char === 'i':
+                  lexeme += char;
+                  if (imaginaryNumerator === '' && imaginaryDecimal === '') {
+                    state = State.NAME;
+                  } else {
+                    state = State.COMPLEX_END;
+                  }
+                  break;
+                case char === '"':
+                  state = State.STRING;
+                  tokens.push(this.makeComplex(
+                    lexeme,
+                    realType,
+                    realNumerator,
+                    realType === NumberType.DECIMAL ? realDecimal : realDenominator,
+                    imaginaryType,
+                    imaginaryNumerator,
+                    imaginaryType === NumberType.DECIMAL ? imaginaryDecimal : imaginaryDenominator
+                  ));
+                  lexeme = char;
+                  break;
+                default: {
+                  state = State.NAME;
+                  lexeme += char;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = COMPLEX END */
+            // LEXEME = .*i.*
+            case state === State.COMPLEX_END: {
+              switch (true) {
+                case char === '"': {
+                  state = State.STRING;
+                  tokens.push(this.makeComplex(
+                    lexeme,
+                    realType,
+                    realNumerator,
+                    realType === NumberType.DECIMAL ? realDecimal : realDenominator,
+                    imaginaryType,
+                    imaginaryNumerator,
+                    imaginaryType === NumberType.DECIMAL ? imaginaryDecimal : imaginaryDenominator
+                  ));
+                  lexeme = char;
+                  break;
+                }
+                default: {
+                  state = State.NAME;
+                  lexeme += char;
                 }
               }
               break;
@@ -278,6 +636,17 @@ class Scanner {
             // LEXEME = \d+/
             state = State.NAME;
           }
+        } else if (state === State.REAL_DECIMAL) {
+          if (realNumerator === '') {
+            if (realDecimal === '') {
+              // LEXEME = .
+              this.error('illegal use of `.`');
+            }
+          }
+        } else if (state === State.SIGNED_NUMERATOR) {
+          if (signedNumerator.length === 1) {
+            state = State.NAME;
+          }
         }
 
         switch (true) {
@@ -287,6 +656,22 @@ class Scanner {
           case state === State.POUND: {
             this.error('bad syntax: `#`');
           }
+          case state === State.SIGNED_NUMERATOR: {
+            tokens.push(this.makeInteger(lexeme, signedNumerator));
+            break;
+          }
+          case state === State.SIGNED_DENOMINATOR: {
+            tokens.push(this.makeFraction(lexeme, signedNumerator, signedDenominator));
+            break;
+          }
+          case state === State.SIGNED_DECIMAL: {
+            if (signedNumerator.length === 1) {
+              tokens.push(this.makeDecimal(lexeme, '', signedDecimal));
+            } else {
+              tokens.push(this.makeDecimal(lexeme, signedNumerator, signedDecimal));
+            }
+            break;
+          }
           case state === State.REAL_NUMERATOR: {
             tokens.push(this.makeInteger(lexeme, realNumerator));
             break;
@@ -295,10 +680,29 @@ class Scanner {
             tokens.push(this.makeFraction(lexeme, realNumerator, realDenominator));
             break;
           }
+          case state === State.REAL_DECIMAL: {
+            tokens.push(this.makeDecimal(lexeme, realNumerator, realDecimal));
+            break;
+          }
+          case state === State.COMPLEX_END: {
+            tokens.push(this.makeComplex(
+              lexeme,
+              realType,
+              realNumerator,
+              realType === NumberType.DECIMAL ? realDecimal : realDenominator,
+              imaginaryType,
+              imaginaryNumerator,
+              imaginaryType === NumberType.DECIMAL ? imaginaryDecimal : imaginaryDenominator
+            ));
+            break;
+          }
           case state === State.STRING:
           case state === State.ESCAPED_CHAR: {
             this.error('expected a closing `"`');
           }
+          case state === State.IMAGINARY_NUMERATOR:
+          case state === State.IMAGINARY_DENOMINATOR:
+          case state === State.IMAGINARY_DECIMAL:
           case state === State.NAME: {
             tokens.push(this.makeName(lexeme));
             break;
@@ -325,14 +729,45 @@ class Scanner {
    * Constructing Tokens
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
   
-  private makeFraction(lexeme: string, numeratorStr: string, denominatorStr: string): Token {
-  let numerator = BigInt(numeratorStr)
-  let denominator = BigInt(denominatorStr);
-  if (denominator === 0n) {
-    this.error(`division by zero in \`${numerator}/${denominator}\``);
+  private makeDecimal(lexeme: string, numeratorStr: string, decimalStr: string): Token {
+    let numerator = BigInt(numeratorStr);
+    if (numerator < 0n) {
+      numerator = (10n ** BigInt(decimalStr.length)) * BigInt(numeratorStr) - BigInt(decimalStr);
+    } else {
+      numerator = (10n ** BigInt(decimalStr.length)) * BigInt(numeratorStr) + BigInt(decimalStr);
+    }
+    let denominator = 10n ** BigInt(decimalStr.length);
+    let value = new RacketExactNumber(numerator, denominator);
+    return new Token(TokenType.NUMBER, lexeme, value);
   }
-  let value = new RacketExactNumber(numerator, denominator);
-  return new Token(TokenType.NUMBER, lexeme, value);
+
+  private makeComplex(
+    lexeme: string, 
+    realType: NumberType, 
+    realNumerator: string, 
+    realPart: string, 
+    imaginaryType: NumberType,
+    imaginaryNumerator: string,
+    imaginaryPart: string
+  ): Token {
+    let real = this.makeReal(realType, realNumerator, realPart);
+    let imaginary = this.makeReal(imaginaryType, imaginaryNumerator, imaginaryPart);
+    if (imaginary.isZero()) {
+      return new Token(TokenType.NUMBER, lexeme, real);
+    } else {
+      let complex = new RacketComplexNumber(real, imaginary);
+      return new Token(TokenType.NUMBER, lexeme, complex); 
+    }
+  }
+
+  private makeFraction(lexeme: string, numeratorStr: string, denominatorStr: string): Token {
+    let numerator = BigInt(numeratorStr)
+    let denominator = BigInt(denominatorStr);
+    if (denominator === 0n) {
+      this.error(`division by zero in \`${numerator}/${denominator}\``);
+    }
+    let value = new RacketExactNumber(numerator, denominator);
+    return new Token(TokenType.NUMBER, lexeme, value);
   }
 
   private makeInteger(lexeme: string, integerStr: string): Token {
@@ -340,11 +775,47 @@ class Scanner {
   }
 
   private makeName(lexeme: string): Token {
+    if (lexeme === '+NaN.0') return new Token(TokenType.NUMBER, lexeme, new RacketInexactFloat(NaN));
+    if (lexeme === '-NaN.0') return new Token(TokenType.NUMBER, lexeme, new RacketInexactFloat(NaN));
+    if (lexeme === '+NaN.f') return new Token(TokenType.NUMBER, lexeme, new RacketInexactFloat(NaN));
+    if (lexeme === '-NaN.f') return new Token(TokenType.NUMBER, lexeme, new RacketInexactFloat(NaN));
+    if (lexeme === '+inf.0') return new Token(TokenType.NUMBER, lexeme, new RacketInexactFloat(Infinity));
+    if (lexeme === '-inf.0') return new Token(TokenType.NUMBER, lexeme, new RacketInexactFloat(-Infinity));
+    if (lexeme === '+inf.f') return new Token(TokenType.NUMBER, lexeme, new RacketInexactFloat(+Infinity));
+    if (lexeme === '-inf.f') return new Token(TokenType.NUMBER, lexeme, new RacketInexactFloat(-Infinity));
+
     if (KEYWORDS.has(lexeme)) {
       // @ts-ignore
       return new Token(KEYWORDS.get(lexeme), lexeme);
+    } else if (lexeme === 'true') {
+      return new Token(TokenType.BOOLEAN, lexeme, RACKET_TRUE);
+    } else if (lexeme === 'false') {
+      return new Token(TokenType.BOOLEAN, lexeme, RACKET_FALSE);
     } else {
       return new Token(TokenType.IDENTIFIER, lexeme);
+    }
+  }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Constructing Values
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  private makeReal(realType: NumberType, realNumerator: string, realPart: string): RacketRealNumber {
+    if (realType === NumberType.INTEGER) {
+      return new RacketExactNumber(BigInt(realNumerator), 1n);
+    } else if (realType === NumberType.DECIMAL) {
+      let numerator =  (10n ** BigInt(realPart.length)) * BigInt(realNumerator) + BigInt(realPart);
+      let denominator = 10n ** BigInt(realPart.length);
+      return new RacketExactNumber(numerator, denominator);
+    } else if (realType === NumberType.FRACTION) {
+      let numerator = BigInt(realNumerator)
+      let denominator = BigInt(realPart);
+      if (denominator === 0n) {
+        this.error(`division by zero in \`${numerator}/${denominator}\``);
+      }
+      return new RacketExactNumber(numerator, denominator);
+    } else {
+      throw new UnreachableCode();
     }
   }
 
