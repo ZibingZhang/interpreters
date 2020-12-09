@@ -22,8 +22,13 @@
 	<!-- Fonts -->
 	<!-- CSS -->
 	<style>
+		body {
+			background-color: #525252;
+			color: white;
+		}
+
 		#code {
-			border: 1pt black solid;
+			border: 1pt white solid;
 			white-space: pre;
 			padding: 30px;
 			font-family: "Fira Mono", monospace;
@@ -36,7 +41,7 @@
 
 <body>
 <div id='code' contenteditable='true' spellcheck='false'
->(check-expect (= 0 -0 0# #e0 0+0i 0-0i 0.0 0. -.0 #i0) true)
+>(check-expect (= 0 -0 0+0i 0-0i 0.0 0. -.0) true)
 (check-expect (= +NaN.0 +NaN.0) false)
 (check-expect (= +inf.0 +inf.f (* -1 -inf.0) (* -1 -inf.f)) true)
 (check-expect (= 1/5 +1/5 0.2 (* -1 -1/5)) true)
@@ -56,7 +61,7 @@
 
 (define square-1 (lambda (n) (* n n)))
 (define (square-2 n) (* n n))
-(check-expect (square-1 #i1.23-56/78i) (square-2 #i1.23-56/78i))
+(check-expect (square-1 1.23-56/78i) (square-2 1.23-56/78i))
 
 [check-expect {= (+ 1 2) 3} true]
 </div>
