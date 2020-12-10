@@ -1,3 +1,4 @@
+import { UnreachableCode } from "./errors";
 import { RacketValue } from "./values";
 
 /** 
@@ -19,8 +20,11 @@ export class Environment {
   define(name: string, value: RacketValue): void {
     /* Note:
      *  It is not the environments job to prevent mutation. That should be
-     *  enforced at the resolver level.
+     *  enforced at the resolver level. The check is just for debugging.
      */
+    if (this.values.has(name)) {
+      throw new UnreachableCode();
+    }
     this.values.set(name, value);
   }
 
@@ -36,7 +40,7 @@ export class Environment {
     let value = this.values.get(name);
     if (value === undefined) {
       if (this.enclosing === undefined) {
-        throw new Error('Unreachable code.');
+        throw new UnreachableCode();
       } else {
         return this.enclosing.get(name);
       }
