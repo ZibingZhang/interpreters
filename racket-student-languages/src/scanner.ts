@@ -58,9 +58,9 @@ class Scanner {
       super();
       this.msg = msg;
     }
-  }
+  };
 
-  private static NextLexeme = class extends Error {}
+  private static NextLexeme = class extends Error {};
 
   private escapedChars = new Map<string, string>([
     ['a', '\a'],
