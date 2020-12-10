@@ -1,5 +1,5 @@
-import { UnreachableCode } from "./errors";
-import { RacketValue } from "./values";
+import { UnreachableCode } from "./errors.js";
+import { RacketValue } from "./values.js";
 
 /** 
  * A nested mapping from names to values. 
