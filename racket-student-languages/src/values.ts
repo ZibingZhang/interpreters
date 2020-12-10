@@ -547,10 +547,12 @@ export interface RacketCallable extends RacketValue {
 export class RacketLambda implements RacketCallable {
   readonly params: string[];
   readonly body: ir2.StmtToVisit;
+  private readonly closure: Environment;
 
-  constructor(params: string[], body: ir2.StmtToVisit) {
+  constructor(params: string[], body: ir2.StmtToVisit, closure: Environment) {
     this.params = params;
     this.body = body;
+    this.closure = closure;
   }
 
   equals(other: RacketValue): boolean {
@@ -559,7 +561,8 @@ export class RacketLambda implements RacketCallable {
 
   call(args: RacketValue[]): RacketValue {
     let interpreter = racket.interpreter;
-    let enclosing = interpreter.environment;
+    let current = interpreter.environment;
+    let enclosing = this.closure;
     interpreter.environment = new Environment(enclosing);
     for (let i = 0; i < args.length; i++) {
       let param = this.params[i];
@@ -567,7 +570,7 @@ export class RacketLambda implements RacketCallable {
       interpreter.environment.define(param, arg);
     }
     let result = interpreter.evaluate(this.body);
-    interpreter.environment = enclosing;
+    interpreter.environment = current;
     return result;
   }
 }

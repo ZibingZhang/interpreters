@@ -74,7 +74,7 @@ export default class Interpreter implements ir2.StmtVisitor {
   }
 
   visitLambdaExpression(expr: ir2.LambdaExpression): RacketLambda {
-    return new RacketLambda(expr.names.map(name => name.lexeme), expr.body);
+    return new RacketLambda(expr.names.map(name => name.lexeme), expr.body, this.environment);
   }
 
   visitIdentifier(expr: ir2.Identifier): RacketValue {
