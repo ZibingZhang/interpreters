@@ -8,8 +8,7 @@ import { RacketValueType } from './symboltable.js';
 import { 
   isBoolean, 
   isNumber, 
-  isString, 
-  // isSymbol
+  isString
 } from './values.js';
 
 /* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -261,7 +260,7 @@ class ResolverErrorReporter {
         this.error(baseMsg + 'but found a number');
       } else if (isString(identifier.value)) { 
         this.error(baseMsg + 'but found a string');
-      } else throw new Error('Unreachable code.');
+      } else throw new UnreachableCode();
     } else if (identifier instanceof ir1.Keyword) {
       this.error(baseMsg + 'but found a keyword');
     } else throw new UnreachableCode();

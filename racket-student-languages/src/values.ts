@@ -1,7 +1,8 @@
 import { Environment } from './environment.js';
 import { 
   DivByZero, 
-  StructureFunctionError 
+  StructureFunctionError,
+  UnreachableCode
 } from './errors.js';
 import * as ir2 from './ir2.js';
 import racket from './racket.js';
@@ -465,11 +466,11 @@ export class RacketComplexNumber extends RacketNumber {
       throw new DivByZero();
     } else {
       let magnitudeSquared = this.real.mul(this.real).add(this.imaginary.mul(this.imaginary));
-      if (!isReal(magnitudeSquared)) throw new Error('Unreachable code.');
+      if (!isReal(magnitudeSquared)) throw new UnreachableCode();
       let invertedMagnitudeSquared = magnitudeSquared.inverted();
       let real = this.real.mul(invertedMagnitudeSquared);
       let imaginary = this.imaginary.mul(invertedMagnitudeSquared).negated();
-      if (!isReal(real) || !isReal(imaginary)) throw new Error('Unreachable code.');
+      if (!isReal(real) || !isReal(imaginary)) throw new UnreachableCode();
       return new RacketComplexNumber(real, imaginary);
     }
   }
@@ -478,12 +479,12 @@ export class RacketComplexNumber extends RacketNumber {
     if (other instanceof RacketComplexNumber) {
       let real = this.real.add(other.real);
       let imaginary = this.imaginary.add(other.imaginary);
-      if (!isReal(real) || !isReal(imaginary)) throw new Error('Unreachable code.');
+      if (!isReal(real) || !isReal(imaginary)) throw new UnreachableCode();
       if (imaginary.isZero()) return real;
       else return new RacketComplexNumber(real, imaginary);
     } else {
       let real = this.real.add(other);
-      if (!isReal(real)) throw new Error('Unreachable code.');
+      if (!isReal(real)) throw new UnreachableCode();
       else return new RacketComplexNumber(real, this.imaginary);
     }
   }
@@ -492,12 +493,12 @@ export class RacketComplexNumber extends RacketNumber {
     if (other instanceof RacketComplexNumber) {
       let real = this.real.mul(other.real).sub(this.imaginary.mul(other.imaginary));
       let imaginary = this.real.mul(other.imaginary).add(this.imaginary.mul(other.real));
-      if (!isReal(real) || !isReal(imaginary)) throw new Error('Unreachable code.');
+      if (!isReal(real) || !isReal(imaginary)) throw new UnreachableCode();
       if (imaginary.isZero()) return real;
       else return new RacketComplexNumber(real, imaginary);
     } else {
       let real = this.real.mul(other);
-      if (!isReal(real)) throw new Error('Unreachable code.');
+      if (!isReal(real)) throw new UnreachableCode();
       else return new RacketComplexNumber(real, this.imaginary);
     }
   }

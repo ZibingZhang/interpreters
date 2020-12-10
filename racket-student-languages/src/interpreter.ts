@@ -1,6 +1,11 @@
 import BUILT_INS from './builtins.js';
 import { Environment } from './environment.js';
-import { BuiltinFunctionError, DivByZero, StructureFunctionError } from './errors.js';
+import { 
+  BuiltinFunctionError, 
+  DivByZero, 
+  StructureFunctionError, 
+  UnreachableCode 
+} from './errors.js';
 import * as ir2 from './ir2.js';
 import racket from './racket.js';
 import { 
@@ -46,7 +51,7 @@ export default class Interpreter implements ir2.StmtVisitor {
     if (isNumber(callee)) {
       this.error(`function call: expected a function after the open parenthesis, but received ${callee.toString()}`);
     } else if (!isCallable(callee)) {
-      throw new Error('Unreachable code.');
+      throw new UnreachableCode();
     }
     let args = expr.arguments.map(this.evaluate.bind(this));
     return callee.call(args);

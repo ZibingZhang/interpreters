@@ -1,4 +1,5 @@
-import { Token } from "./tokens";
+import { UnreachableCode } from './errors.js';
+import { Token } from './tokens';
 
 /* = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
  * Interfaces
@@ -57,7 +58,7 @@ export class SExprLiteral implements SExpr {
 
   toString(): string {
     let value = this.token.value;
-    if (value === undefined) throw new Error('Unreachable code.');
+    if (value === undefined) throw new UnreachableCode();
     return value.toString();
   }
 

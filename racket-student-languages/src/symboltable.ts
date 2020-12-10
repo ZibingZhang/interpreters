@@ -1,3 +1,5 @@
+import { UnreachableCode } from './errors.js';
+
 /**
  * A nested mapping from names to value types.
  * 
@@ -32,7 +34,7 @@ export class SymbolTable {
       if (arity !== undefined) {
         this.arities.set(name, arity);
       } else {
-        throw new Error('Unreachable code.');
+        throw new UnreachableCode();
       }
     }
     this.values.set(name, value);
@@ -59,7 +61,7 @@ export class SymbolTable {
     let value = this.arities.get(name);
     if (value === undefined) {
       if (this.enclosing === undefined) {
-        throw new Error('Unreachable code.');
+        throw new UnreachableCode();
       } else {
         return this.enclosing.getArity(name);
       }

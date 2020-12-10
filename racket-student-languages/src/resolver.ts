@@ -41,7 +41,7 @@ export default class Resolver implements ir1.StmtVisitor {
       } else if (isCallable(value)) {
         this.symbolTable.define(name, RacketValueType.BUILTIN_FUNCTION);
       } else {
-        throw new Error('Unreachable code.');
+        throw new UnreachableCode();
       }
     }
   }
@@ -330,7 +330,7 @@ export default class Resolver implements ir1.StmtVisitor {
         this.symbolTable.define(name, RacketValueType.FUNCTION, body.names.length);
       } else if (body instanceof ir2.Literal) {
         this.symbolTable.define(name, RacketValueType.VARIABLE);
-      } else throw new Error('Unreachable code.');
+      } else throw new UnreachableCode();
       return new ir2.DefineVariable(new ir2.Identifier(identifier.name), this.evaluate(exprs[1]));
     } else {
       // return statement for typechecker
