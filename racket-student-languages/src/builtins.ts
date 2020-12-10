@@ -364,6 +364,42 @@ class MakeRectangular extends RacketBuiltInFunction {
   }
 }
 
+/* Signature:
+ * (sub1 x) → number
+ *    x : number
+ * Purpose Statement:
+ *    Decrements the given number.
+ */
+class Sub1 extends RacketBuiltInFunction {
+  constructor() {
+    super('sub1', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketNumber {
+    super.call(args);
+    let numbers = assertListOfNumbers(this.name, args);
+    return numbers[0].sub(new RacketExactNumber(1n, 1n));
+  }
+}
+
+/* Signature:
+ * (zero? x) → boolean?
+ *    x : number
+ * Purpose Statement:
+ *    Determines if some number is zero or not.
+ */
+class ZeroHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('zero?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let numbers = assertListOfNumbers(this.name, args);
+    return toRacketBoolean(numbers[0].isZero());
+  }
+}
+
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Boolean Functions
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
@@ -866,9 +902,9 @@ addBuiltinFunction(new Sgn());
 // addBuiltinFunction(new Sinh());
 // addBuiltinFunction(new Sqr());
 // addBuiltinFunction(new Sqrt());
-// addBuiltinFunction(new Sub1());
+addBuiltinFunction(new Sub1());
 // addBuiltinFunction(new Tan());
-// addBuiltinFunction(new ZeroHuh());
+addBuiltinFunction(new ZeroHuh());
 /* Boolean Functions */
 addBuiltinFunction(new BooleanToString());
 addBuiltinFunction(new BooleanSymEqHuh());
