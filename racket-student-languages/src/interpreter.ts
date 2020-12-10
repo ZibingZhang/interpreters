@@ -10,7 +10,8 @@ import {
   RacketStructure,
   RacketSymbol,
   RacketValue, 
-  RACKET_EMPTY_LIST
+  RACKET_EMPTY_LIST,
+  RACKET_TRUE
 } from './values.js';
 
 /**
@@ -79,6 +80,15 @@ export default class Interpreter implements ir2.StmtVisitor {
   visitIdentifier(expr: ir2.Identifier): RacketValue {
     let value = this.environment.get(expr.name.lexeme);
     return value;
+  }
+
+  visitIfExpression(expr: ir2.IfExpression): RacketValue {
+    let predicate = this.evaluate(expr.predicate);
+    if (predicate === RACKET_TRUE) {
+      return this.evaluate(expr.ifTrue);
+    } else {
+      return this.evaluate(expr.ifFalse);
+    }
   }
 
   visitLiteral(expr: ir2.Literal): RacketValue {

@@ -16,6 +16,8 @@ export enum TokenType {
   DEFINE_STRUCT = 'define-struct',
   LAMBDA = 'lambda',
 
+  IF = 'if',
+
   BOOLEAN = 'BOOLEAN',
   IDENTIFIER = 'IDENTIFIER',
   NUMBER = 'NUMBER',
@@ -45,8 +47,9 @@ export class Token {
 }
 
 export const KEYWORDS = new Map([
-  ['check-expect', TokenType.CHECK_EXPECT],
-  ['define', TokenType.DEFINE],
-  ['define-struct', TokenType.DEFINE_STRUCT],
-  ['lambda', TokenType.LAMBDA]
+  [TokenType.CHECK_EXPECT.valueOf(), TokenType.CHECK_EXPECT],
+  [TokenType.DEFINE.valueOf(), TokenType.DEFINE],
+  [TokenType.DEFINE_STRUCT.valueOf(), TokenType.DEFINE_STRUCT],
+  [TokenType.LAMBDA.valueOf(), TokenType.LAMBDA],
+  [TokenType.IF.valueOf(), TokenType.IF]
 ]);;

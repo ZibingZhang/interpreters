@@ -29,9 +29,10 @@ export interface StmtVisitor {
   visitCall(expr: Call): any;
   visitDefineStructure(expr: DefineStructure): any;
   visitDefineVariable(expr: DefineVariable): any;
+  visitIdentifier(expr: Identifier): any;
+  visitIfExpression(expr: IfExpression): any;
   visitLambdaExpression(expr: LambdaExpression): any;
   visitLiteral(expr: Literal): any;
-  visitIdentifier(expr: Identifier): any;
   visitQuoted(expr: Quoted): any;
   visitTestCase(expr: TestCase): any;
 }
@@ -103,6 +104,24 @@ export class Identifier implements StmtToVisit {
 
   accept(visitor: StmtVisitor): any {
     return visitor.visitIdentifier(this);
+  }
+}
+/**
+ * An if expression.
+ */
+export class IfExpression implements StmtToVisit {
+  readonly predicate: Expr;
+  readonly ifTrue: Expr;
+  readonly ifFalse: Expr;
+
+  constructor(predicate: Expr, ifTrue: Expr, ifFalse: Expr) {
+    this.predicate = predicate;
+    this.ifTrue = ifTrue;
+    this.ifFalse = ifFalse;
+  }
+
+  accept(visitor: StmtVisitor): any {
+    return visitor.visitIfExpression(this);
   }
 }
 

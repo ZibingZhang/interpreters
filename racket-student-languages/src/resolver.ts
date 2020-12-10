@@ -50,7 +50,7 @@ export default class Resolver implements ir1.StmtVisitor {
    * Visitor
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  visitGroup(expr: ir1.Group): undefined | ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.Quoted {
+  visitGroup(expr: ir1.Group): undefined | ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.IfExpression | ir2.Quoted {
     let elements = expr.elements;
 
     if (this.resolvingQuoted) {
@@ -92,6 +92,9 @@ export default class Resolver implements ir1.StmtVisitor {
         this.symbolTable = new SymbolTable(enclosing);
         let result = this.lambdaExpression(args);
         this.symbolTable = enclosing;
+        return result;
+      } else if (type === TokenType.IF) {
+        let result = this.ifExpression(args);
         return result;
       } else throw new UnreachableCode();
     } else if (callee instanceof ir1.Identifier) {
@@ -217,6 +220,7 @@ export default class Resolver implements ir1.StmtVisitor {
       if (paramList.length === 0) {
         reporter.resolver.noFunctionParams();
       }
+      this.symbolTable.define(identifier.name.lexeme, RacketValueType.FUNCTION, paramList.length);
       let enclosing = this.symbolTable;
       this.symbolTable = new SymbolTable(enclosing);
       let paramNames: Token[] = [];
@@ -235,7 +239,6 @@ export default class Resolver implements ir1.StmtVisitor {
         let body = this.evaluate(exprs[0])
         this.atTopLevel = atTopLevel;
         this.symbolTable = enclosing;
-        this.symbolTable.define(identifier.name.lexeme, RacketValueType.FUNCTION, paramNames.length);
         return new ir2.DefineVariable(new ir2.Identifier(identifier.name), new ir2.LambdaExpression(paramNames, body));
       } else if (exprs.length < 1) {
         // return statement for typechecker
@@ -371,6 +374,13 @@ export default class Resolver implements ir1.StmtVisitor {
       // return statement for typechecker
       return reporter.resolver.badLambdaParamListType(paramList);
     }
+  }
+
+  private ifExpression(exprs: ir1.Stmt[]): ir2.IfExpression {
+    let predicate = this.evaluate(exprs[0])
+    let ifTrue = this.evaluate(exprs[1]);
+    let ifFalse = this.evaluate(exprs[2]);
+    return new ir2.IfExpression(predicate, ifTrue, ifFalse);
   }
 
   private quoted(exprs: ir1.Stmt[]): ir2.Quoted {

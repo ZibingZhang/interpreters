@@ -34,7 +34,11 @@ enum State {
   STRING,
   ESCAPED_CHAR,
   // Name
-  NAME
+  NAME,
+  // Comments
+  LINE_COMMENT,
+  BLOCK_COMMENT,
+  MAYBE_END_BLOCK_COMMENT
 }
 
 enum NumberType {
@@ -102,9 +106,19 @@ class Scanner {
     let imaginaryDecimal = '';
     let imaginaryType = NumberType.INTEGER;
 
+    let state = State.TOP;
     for (let group of groups) {
-      let state = State.TOP;
-
+      switch (true) {
+        case state === State.LINE_COMMENT:
+        case state === State.BLOCK_COMMENT:
+        case state === State.MAYBE_END_BLOCK_COMMENT: {
+          break;
+        }
+        default: {
+          state = State.TOP;
+        }
+      }
+      
       try {
         for (let char of group) {
           switch (true) {
@@ -113,7 +127,7 @@ class Scanner {
             case state === State.TOP: {
               lexeme = char;
               switch (true) {
-                case /\s/.exec(char) !== null: {
+                case /\s/.test(char): {
                   this.nextLexeme();
                 }
                 case this.singleCharTokens.has(char): {
@@ -151,6 +165,10 @@ class Scanner {
                   state = State.STRING;
                   break;
                 }
+                case char === ';': {
+                  state = State.LINE_COMMENT;
+                  break;
+                }
                 default: {
                   state = State.NAME;
                 }
@@ -181,11 +199,17 @@ class Scanner {
                     this.error(`bad syntax \`${group.substring(0, 3)}\``);
                   }
                 }
+                // LEXEME = #|.*
+                case char === '|': {
+                  state = State.BLOCK_COMMENT;
+                  break;
+                }
                 // LEXEME = #(?!t|f).*
                 default: {
                   this.error(`bad syntax \`${group.substring(0, 2)}\``);
                 }
               }
+              break;
             }
 
             /* STATE  = SIGNED NUMERATOR */
@@ -624,6 +648,46 @@ class Scanner {
               }
               break;
             }
+
+            /* STATE  = LINE COMMENT */
+            // LEXEME = ;.*
+            case state === State.LINE_COMMENT: {
+              switch (true) {
+                case /\n/.test(char): {
+                  state = State.TOP;
+                  this.nextLexeme()
+                }
+              }
+              break;
+            }
+
+            /* STATE  = BLOCK COMMENT */
+            // LEXEME = #|.*
+            case state === State.BLOCK_COMMENT: {
+              switch (true) {
+                case char === '|': {
+                  state = State.MAYBE_END_BLOCK_COMMENT;
+                  break;
+                }
+              }
+              break;
+            }
+
+            /* STATE  = MAYBE END BLOCK COMMENT */
+            // LEXEME = #|.*|.*
+            case state === State.MAYBE_END_BLOCK_COMMENT: {
+              switch (true) {
+                case char === '#': {
+                  state = State.TOP;
+                  lexeme = '';
+                  break;
+                }
+                default: {
+                  state = State.BLOCK_COMMENT;
+                }
+              }
+              break;
+            }
   
             default: {
               throw new UnreachableCode();
@@ -705,6 +769,11 @@ class Scanner {
           case state === State.IMAGINARY_DECIMAL:
           case state === State.NAME: {
             tokens.push(this.makeName(lexeme));
+            break;
+          }
+          case state === State.LINE_COMMENT:
+          case state === State.BLOCK_COMMENT:
+          case state === State.MAYBE_END_BLOCK_COMMENT: {
             break;
           }
           default: {
