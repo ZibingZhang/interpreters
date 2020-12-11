@@ -1,69 +1,130 @@
 <!DOCTYPE html>
 <head>
   <!-- Required meta tags -->
-	<meta charset='utf-8'>
-	<meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>
 
-	<!-- Favicon -->
-	<link rel='shortcut icon' href=''>
+  <!-- Favicon -->
+  <link rel='shortcut icon' href=''>
 
-	<!-- Author Meta -->
-	<meta name='author' content='Zibing Zhang'>
-	<!-- Meta Description -->
-	<meta name='description' content='Racket Student Languages'>
-	<!-- Meta Keyword -->
-	<meta name='keywords' content=''>
-	<!-- Meta Character Set -->
-	<meta charset='UTF-8'>
+  <!-- Author Meta -->
+  <meta name='author' content='Zibing Zhang'>
+  <!-- Meta Description -->
+  <meta name='description' content='Racket Student Languages'>
+  <!-- Meta Keyword -->
+  <meta name='keywords' content=''>
+  <!-- Meta Character Set -->
+  <meta charset='UTF-8'>
 
-	<!-- Site Title -->
-	<title>Racket Student Languages</title>
+  <!-- Site Title -->
+  <title>Racket Student Languages</title>
 
-	<!-- Fonts -->
-	<!-- CSS -->
-	<style>
-		body {
-			background-color: #525252;
-			color: white;
-		}
+  <!-- Fonts -->
+  <!-- CSS -->
+  <style>
+    body {
+      overflow: hidden;
+    }
 
-		#code {
-			border: 1pt white solid;
-			white-space: pre;
-			padding: 30px;
-			font-family: "Fira Mono", monospace;
-			-moz-tab-size: 2;
-			tab-size: 2;
-		}
-	</style>
-	<!-- JS -->
+    #editor {
+      margin: 0;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+  </style>
+  <!-- JS -->
 </head>
 
 <body>
-<div id='code' contenteditable='true' spellcheck='false'
->(check-expect (= 0 -0 0+0i 0-0i 0.0 0. -.0) true)
+<pre id='editor'
+>;; Example Beginning Student Language Program
+#|
+
+Keyboard Shortcuts:
+    Alt + C :: Clear
+    Alt + R :: Run (Output -> Console)
+
+|#
+
+;; ========== Types ==========
+
+;; Numbers
+(check-expect (= 0 -0 0+0i 0-0i 0.0 0. -.0) true)
 (check-expect (= +NaN.0 +NaN.0) false)
 (check-expect (= +inf.0 +inf.f (* -1 -inf.0) (* -1 -inf.f)) true)
 (check-expect (= 1/5 +1/5 0.2 (* -1 -1/5)) true)
 
+;; Booleans
 (check-expect true true)
 (check-expect false false)
 (check-expect (boolean=? true false) false)
 
+;; Symbols
 (check-expect 'x 'x)
 (check-expect (symbol=? 'x 'X) false)
 
+;; Strings
 (check-expect "hello" "hello")
 (check-expect (string=? "Hello" "hello") false)
 
+;; Variables
 (define VAR-1 1)
 (check-expect VAR-1 1)
 
+;; Functions
 (define square-1 (lambda (n) (* n n)))
 (define (square-2 n) (* n n))
 (check-expect (square-1 1.23-56/78i) (square-2 1.23-56/78i))
 
+;; ========== Syntax ==========
+
+;; If Expressions
+(define (fac1 n)
+  (if (zero? n)
+      1
+      (* n (fac1 (sub1 n)))))
+(check-expect (fac1 10) 3628800)
+;; (fac1 1000) => stack overflow
+
+;; And Expressions
+(check-expect (and #f (/ 1 0)) #f)
+(check-expect (and #t #t) #t)
+(check-expect (and #t #f) #f)
+(check-expect (and #f #t) #f)
+(check-expect (and #f #f) #f)
+
+;; Or Expressions
+(check-expect (or #t (/ 1 0)) #t)
+(check-expect (or #t #t) #t)
+(check-expect (or #t #f) #t)
+(check-expect (or #f #t) #t)
+(check-expect (or #f #f) #f)
+
+;; ========== Miscellaneous ==========
+
+;; Matching Brackets
 [check-expect {= (+ 1 2) 3} true]
-</div>
-<script type='module' src='/dist/main.js'></script>
+
+;; Closure
+(define a1 1)
+(define f1 (lambda (_) a1))
+(define (f2 a1) (f1 a1))
+(check-expect (f2 2) 1)
+
+;; Tail End Recursion
+(define (fac2-acc n acc)
+  (if (zero? n)
+      acc
+      (fac2-acc (sub1 n) (* n acc))))
+(define (fac2 n)
+  (fac2-acc n 1))
+(check-expect (fac2 170) 7257415615307998967396728211129263114716991681296451376543577798900561843401706157852350749242617459511490991237838520776666022565442753025328900773207510902400430280058295603966612599658257104398558294257568966313439612262571094946806711205568880457193340212661452800000000000000000000000000000000000000000)
+;; TODO: (check-expect (fac2 171) +inf.0) => pass
+</pre>
+
+<script src='ace/ace.js' type='text/javascript' charset='utf-8'></script>
+<script type='module' src='dist/main.js'></script>
 </body>

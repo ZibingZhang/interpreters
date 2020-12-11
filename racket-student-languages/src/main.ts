@@ -1,24 +1,22 @@
 import racket from './racket.js';
 
-let code = document.getElementById('code');
+// @ts-ignore
+var editor = ace.edit('editor');
+editor.setTheme('ace/theme/racket');
+editor.session.setMode('ace/mode/racket');
 
 function run() {
   console.clear();
-  const text: string = document.getElementById('code')?.innerText || '';
+  const text: string = editor.getValue();
   racket.run(text);
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    document.execCommand('insertHTML', false, '&#009');
-  }
-
   if (!e.altKey) return;
 
   switch (e.key) {
     case 'c': {
-      if (code) code.innerHTML = ''; 
+      editor.setValue('');
       break;
     }
     case 'r': {
@@ -28,5 +26,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
+editor.focus();
+editor.navigateFileEnd();
 run();
-code?.focus();
