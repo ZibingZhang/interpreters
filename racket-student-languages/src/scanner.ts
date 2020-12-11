@@ -82,7 +82,7 @@ class Scanner {
     ['}', TokenType.CLOSE_BRACE],
     ['[', TokenType.OPEN_BRACKET],
     [']', TokenType.CLOSE_BRACKET],
-    ["'", TokenType.QUOTE]
+    ["'", TokenType.SINGLE_QUOTE]
   ]);
 
   /**

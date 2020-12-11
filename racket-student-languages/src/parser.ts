@@ -70,7 +70,7 @@ class TokenParser {
       return this.literal();
     } else if (this.match(TokenType.OPEN, TokenType.OPEN_BRACE, TokenType.OPEN_BRACKET)) {
       return this.list();
-    } else if (this.match(TokenType.QUOTE)) {
+    } else if (this.match(TokenType.SINGLE_QUOTE)) {
       return this.quoted();
     } else if (this.match(TokenType.CLOSE, TokenType.CLOSE_BRACE, TokenType.CLOSE_BRACKET)) {
       if (this.openingStack.length === 0) {
@@ -107,7 +107,10 @@ class TokenParser {
   }
 
   private quoted(): SExprList {
-    let elements: SExpr[] = [new SExprSymbol(new Token(TokenType.IDENTIFIER, 'quote'))];
+    if (this.isAtEnd()) {
+      this.error('read-syntax: expected an element for quoting "\'", found end-of-file');
+    }
+    let elements: SExpr[] = [new SExprSymbol(new Token(TokenType.QUOTE, TokenType.QUOTE.valueOf()))];
     elements.push(this.expr());
     return new SExprList(elements);
   }

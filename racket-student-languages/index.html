@@ -103,6 +103,15 @@ Keyboard Shortcuts:
 (check-expect (or #f #t) #t)
 (check-expect (or #f #f) #f)
 
+;; Cond Expressions
+(check-expect (cond [true 1]) 1)
+(check-expect (cond [else 1]) 1)
+(check-expect (cond 
+                [false (/ 1 0)] 
+                [true 1] 
+                [else (/ 1 0)]) 
+              1)
+
 ;; ========== Miscellaneous ==========
 
 ;; Matching Brackets

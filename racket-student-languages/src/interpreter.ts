@@ -11,6 +11,7 @@ import * as ir2 from './ir2.js';
 import racket from './racket.js';
 import Stack from './stack.js';
 import { 
+  isBoolean,
   isCallable, 
   RacketLambda,
   RacketStructure,
@@ -95,6 +96,18 @@ export default class Interpreter implements ir2.StmtVisitor {
         }
       }
     }
+  }
+
+  visitCondExpression(expr: ir2.CondExpression): RacketValue {
+    for (let clause of expr.clauses) {
+      let question = this.evaluate(clause[0]);
+      if (!isBoolean(question)) {
+        this.error('cond: question result is not true or false:' + question.toString());
+      } else if (question === RACKET_TRUE) {
+        return this.evaluate(clause[1]);
+      }
+    }
+    this.error('cond: all question results were false');
   }
 
   visitDefineStructure(expr: ir2.DefineStructure): void {

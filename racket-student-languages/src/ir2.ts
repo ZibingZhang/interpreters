@@ -28,6 +28,7 @@ export interface Expr extends StmtToVisit {}
 export interface StmtVisitor {
   visitAndExpression(expr: AndExpression): any;
   visitCall(expr: Call): any;
+  visitCondExpression(expr: CondExpression): any;
   visitDefineStructure(expr: DefineStructure): any;
   visitDefineVariable(expr: DefineVariable): any;
   visitIdentifier(expr: Identifier): any;
@@ -72,6 +73,21 @@ export class Call implements StmtToVisit {
 
   accept(visitor: StmtVisitor): any {
     return visitor.visitCall(this);
+  }
+}
+
+/**
+ * A cond expression.
+ */
+export class CondExpression implements StmtToVisit {
+  readonly clauses: [StmtToVisit, StmtToVisit][];
+
+  constructor(clauses: [StmtToVisit, StmtToVisit][]) {
+    this.clauses = clauses;
+  }
+
+  accept(visitor: StmtVisitor): any {
+    return visitor.visitCondExpression(this);
   }
 }
 

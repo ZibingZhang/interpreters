@@ -15,15 +15,19 @@ export enum TokenType {
   DEFINE = 'define',
   DEFINE_STRUCT = 'define-struct',
   LAMBDA = 'lambda',
+  QUOTE = 'quote',
+
+  SINGLE_QUOTE = "'",
 
   AND = 'and',
+  COND = 'cond',
+  ELSE =  'else',
   IF = 'if',
   OR = 'or',
 
   BOOLEAN = 'BOOLEAN',
   IDENTIFIER = 'IDENTIFIER',
   NUMBER = 'NUMBER',
-  QUOTE = 'QUOTE',
   STRING = 'STRING',
   
   EOF = 'EOF'
@@ -53,7 +57,10 @@ export const KEYWORDS = new Map([
   [TokenType.DEFINE.valueOf(), TokenType.DEFINE],
   [TokenType.DEFINE_STRUCT.valueOf(), TokenType.DEFINE_STRUCT],
   [TokenType.LAMBDA.valueOf(), TokenType.LAMBDA],
+  [TokenType.QUOTE.valueOf(), TokenType.QUOTE],
   [TokenType.AND.valueOf(), TokenType.AND],
+  [TokenType.COND.valueOf(), TokenType.COND],
+  [TokenType.ELSE.valueOf(), TokenType.ELSE],
   [TokenType.IF.valueOf(), TokenType.IF],
   [TokenType.OR.valueOf(), TokenType.OR],
 ]);;

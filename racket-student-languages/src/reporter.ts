@@ -113,6 +113,10 @@ class ResolverErrorReporter {
    * Visit Keyword
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
+  elseNotInClause(): never {
+    this.error('else: not allowed here, because this is not a question in a clause');
+  }
+
   missingOpenParenthesis(keyword: string): never {
     this.error(`${keyword}: expected an open parenthesis before ${keyword}, but found none`);
   }
@@ -128,6 +132,45 @@ class ResolverErrorReporter {
     } else {
       this.error(baseMsg + 'but found only 1');
     }
+  }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+  * Group Sub-Case: Cond Expression
+  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  missingClause(): never {
+    this.error("cond: expected a clause after cond, but nothing's there");
+  }
+
+  expectedClause(clause: ir1.Stmt): never {
+    let baseMsg = 'cond: expected a clause with a question and an answer, ';
+    if (clause instanceof ir1.Identifier
+        || clause instanceof ir1.Keyword) {
+      this.error(baseMsg + 'but found something else');
+    } else if (clause instanceof ir1.Literal) {
+      if (isBoolean(clause)) {
+        this.error(baseMsg + 'but found something else');
+      } else if (isNumber(clause)) {
+        this.error(baseMsg + 'but found a number');
+      } else if (isString(clause)) {
+        this.error(baseMsg + 'but found a string');
+      } else throw new UnreachableCode();
+    } else throw new UnreachableCode();
+  }
+
+  clauseArityMismatch(parts: number): never {
+    let baseMsg = 'cond: expected a clause with a question and an answer, ';
+    if (parts === 0) {
+      this.error(baseMsg + 'but found an empty part');
+    } else if (parts === 1) {
+      this.error(baseMsg + 'but found a clause with only one part');
+    } else {
+      this.error(baseMsg + `but found a clause with ${parts} parts`);
+    }
+  }
+
+  elseNotInLastClause(): never {
+    this.error("cond: found an else clause that isn't the last clause in its cond expression");
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

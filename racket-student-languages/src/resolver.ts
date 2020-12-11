@@ -19,7 +19,8 @@ import {
 import { 
   isCallable,
   isList,
-  isNumber
+  isNumber,
+  RACKET_TRUE
 } from './values.js';
 
 /**
@@ -50,7 +51,7 @@ export default class Resolver implements ir1.StmtVisitor {
    * Visitor
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  visitGroup(expr: ir1.Group): undefined | ir2.AndExpression | ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.IfExpression | ir2.OrExpression | ir2.Quoted {
+  visitGroup(expr: ir1.Group): undefined | ir2.AndExpression | ir2.Call | ir2.CondExpression | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.IfExpression | ir2.OrExpression | ir2.Quoted {
     let elements = expr.elements;
 
     if (this.resolvingQuoted) {
@@ -82,6 +83,8 @@ export default class Resolver implements ir1.StmtVisitor {
           this.testCases.push([args[0], args[1]]);
           return
         }
+      } else if (type === TokenType.COND) {
+        return this.condExpression(args);
       } else if (type === TokenType.DEFINE) {
         let inFunctionDefinition = this.inFunctionDefinition;
         this.inFunctionDefinition = true;
@@ -102,12 +105,11 @@ export default class Resolver implements ir1.StmtVisitor {
       } if (type === TokenType.OR) {
         let result = this.orExpression(args);
         return result;
+      } else if (type === TokenType.QUOTE) {
+        return this.quoted(args);
       } else throw new UnreachableCode();
     } else if (callee instanceof ir1.Identifier) {
       let name = callee.name.lexeme;
-      if (name === 'quote') {
-        return this.quoted(args);
-      }
       let type = this.symbolTable.get(name);
       if (type === undefined) { 
         reporter.resolver.undefinedCallee(name);
@@ -148,6 +150,9 @@ export default class Resolver implements ir1.StmtVisitor {
     if (expr.token.type === TokenType.CHECK_EXPECT) {
       // return statement for typechecker
       return reporter.resolver.testCaseArityMismatch(0);
+    } else if (expr.token.type === TokenType.ELSE) {
+      // return statement for typechecker
+      return reporter.resolver.elseNotInClause();
     } else {
       // return statement for typechecker
       return reporter.resolver.missingOpenParenthesis(expr.token.type.valueOf());
@@ -207,6 +212,33 @@ export default class Resolver implements ir1.StmtVisitor {
       reporter.resolver.andNotEnoughArguments(exprs.length);
     }
     return new ir2.AndExpression(exprs.map(this.evaluate.bind(this)));
+  }
+
+  private condExpression(exprs: ir1.Stmt[]): ir2.CondExpression {
+    if (exprs.length === 0) {
+      reporter.resolver.missingClause();
+    }
+    let clauses: [ir2.StmtToVisit, ir2.StmtToVisit][] = [];
+    exprs.forEach((expr, idx) => {
+      if (!(expr instanceof ir1.Group)) {
+        reporter.resolver.expectedClause(expr);
+      } else if (expr.elements.length != 2) {
+        reporter.resolver.clauseArityMismatch(expr.elements.length);
+      } else {
+        let question = expr.elements[0];
+        let answer = expr.elements[1];
+        if (question instanceof ir1.Keyword && question.token.type === TokenType.ELSE) {
+          if (idx !== exprs.length - 1) {
+            reporter.resolver.elseNotInClause();
+          } else {
+            clauses.push([new ir2.Literal(RACKET_TRUE), this.evaluate(answer)]);
+          }
+        } else {
+          clauses.push([this.evaluate(question), this.evaluate(answer)]); 
+        }
+      }
+    });
+    return new ir2.CondExpression(clauses);
   }
 
   private define(exprs: ir1.Stmt[]): ir2.DefineVariable {
