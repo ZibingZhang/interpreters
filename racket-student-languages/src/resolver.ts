@@ -338,6 +338,16 @@ export default class Resolver implements ir1.StmtVisitor {
     }
   }
 
+  private ifExpression(exprs: ir1.Stmt[]): ir2.IfExpression {
+    if (exprs.length != 3) {
+      reporter.resolver.ifArityMismatch(exprs.length);
+    }
+    let predicate = this.evaluate(exprs[0])
+    let ifTrue = this.evaluate(exprs[1]);
+    let ifFalse = this.evaluate(exprs[2]);
+    return new ir2.IfExpression(predicate, ifTrue, ifFalse);
+  }
+
   private lambdaExpression(exprs: ir1.Stmt[]): ir2.LambdaExpression {
     if (!this.inFunctionDefinition) {
       reporter.resolver.lambdaNotInFunctionDefinition();
@@ -374,13 +384,6 @@ export default class Resolver implements ir1.StmtVisitor {
       // return statement for typechecker
       return reporter.resolver.badLambdaParamListType(paramList);
     }
-  }
-
-  private ifExpression(exprs: ir1.Stmt[]): ir2.IfExpression {
-    let predicate = this.evaluate(exprs[0])
-    let ifTrue = this.evaluate(exprs[1]);
-    let ifFalse = this.evaluate(exprs[2]);
-    return new ir2.IfExpression(predicate, ifTrue, ifFalse);
   }
 
   private quoted(exprs: ir1.Stmt[]): ir2.Quoted {

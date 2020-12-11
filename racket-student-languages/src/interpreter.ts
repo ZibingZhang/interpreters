@@ -17,6 +17,7 @@ import {
   RacketSymbol,
   RacketValue, 
   RACKET_EMPTY_LIST,
+  RACKET_FALSE,
   RACKET_TRUE
 } from './values.js';
 
@@ -114,10 +115,6 @@ export default class Interpreter implements ir2.StmtVisitor {
     return;
   }
 
-  visitLambdaExpression(expr: ir2.LambdaExpression): RacketLambda {
-    return new RacketLambda(expr.names.map(name => name.lexeme), expr.body, this.environment);
-  }
-
   visitIdentifier(expr: ir2.Identifier): RacketValue {
     let value = this.environment.get(expr.name.lexeme);
     return value;
@@ -127,9 +124,15 @@ export default class Interpreter implements ir2.StmtVisitor {
     let predicate = this.evaluate(expr.predicate);
     if (predicate === RACKET_TRUE) {
       return this.evaluate(expr.ifTrue);
-    } else {
+    } else if (predicate === RACKET_FALSE) {
       return this.evaluate(expr.ifFalse);
+    } else {
+      this.error(`if: question result is not true or false: ${predicate}`);
     }
+  }
+
+  visitLambdaExpression(expr: ir2.LambdaExpression): RacketLambda {
+    return new RacketLambda(expr.names.map(name => name.lexeme), expr.body, this.environment);
   }
 
   visitLiteral(expr: ir2.Literal): RacketValue {

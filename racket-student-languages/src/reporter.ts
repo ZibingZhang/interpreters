@@ -274,8 +274,25 @@ class ResolverErrorReporter {
     this.error(`define: expected an expression after the variable name ${name}, but nothing's there`);
   }
 
-  expectedSingleExpressionVariableValue(name: string, exprs: number) {
+  expectedSingleExpressionVariableValue(name: string, exprs: number): never {
     this.error(`define: expected only one expression after the variable name ${name}, but found ${exprs - 2} extra part${exprs - 2 === 1 ? '' : 's'}`);
+  }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Group Sub-Case: If Expression
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  ifArityMismatch(parts: number): never {
+    let baseMsg = 'if: expected a question and two answers, ';
+    if (parts === 0) {
+      this.error(baseMsg + 'but found none');
+    } else if (parts === 1) {
+      this.error(baseMsg + 'but found only 1 part');
+    } else if (parts === 2) {
+      this.error(baseMsg + 'but found only 2 parts');
+    } else {
+      this.error(baseMsg +`but found ${parts} parts`);
+    }
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
