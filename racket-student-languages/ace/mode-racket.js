@@ -8,7 +8,7 @@ let identifierRe = /[^#\s"][^\s\[({\])}]*/;
 let RacketHighlightRules = function(options) {
     let keywordMapper = this.createKeywordMapper({
         "constant.language.boolean": "true|false",
-        "keyword": "check-expect|define|define-struct|lambda",
+        "keyword": "and|check-expect|cond|define|define-struct|else|if|lambda|or|quote",
         "constant.numeric": "+NaN.0|+NaN.f|-NaN.0|-NaN.f|+inf.0|+inf.f|-inf.0|-inf.f"
     }, "identifier");
 
