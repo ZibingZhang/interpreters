@@ -11,6 +11,9 @@ function run() {
   racket.run(text);
 }
 
+// @ts-ignore
+ace.run = run;
+
 document.addEventListener('keydown', e => {
   if (!e.altKey) return;
 
