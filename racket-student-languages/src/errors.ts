@@ -2,6 +2,8 @@ export class UnreachableCode extends Error {}
 
 class RacketError extends Error {}
 
+export class StackOverflow extends RacketError {}
+
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Errors specific to a step in the interpretation process.
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */

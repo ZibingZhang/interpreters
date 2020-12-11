@@ -3,14 +3,15 @@ import { Environment } from './environment.js';
 import { 
   BuiltinFunctionError, 
   DivByZero, 
+  StackOverflow, 
   StructureFunctionError, 
   UnreachableCode 
 } from './errors.js';
 import * as ir2 from './ir2.js';
 import racket from './racket.js';
+import Stack from './stack.js';
 import { 
   isCallable, 
-  isNumber,
   RacketLambda,
   RacketStructure,
   RacketSymbol,
@@ -30,9 +31,12 @@ export default class Interpreter implements ir2.StmtVisitor {
       super();
       this.msg = msg;
     }
-  }
+  };
+
+  private static TailEndRecurrsion = class extends Error {};
 
   environment: Environment = new Environment();
+  stack: Stack = new Stack();
 
   constructor() {
     const GLOBALS = new Environment();
@@ -47,14 +51,43 @@ export default class Interpreter implements ir2.StmtVisitor {
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
   visitCall(expr: ir2.Call): RacketValue {
+    if (this.stack.size() > 1000) {
+      throw new StackOverflow();
+    }
     let callee = this.evaluate(expr.callee);
-    if (isNumber(callee)) {
-      this.error(`function call: expected a function after the open parenthesis, but received ${callee.toString()}`);
-    } else if (!isCallable(callee)) {
+    if (!isCallable(callee)) {
       throw new UnreachableCode();
     }
-    let args = expr.arguments.map(this.evaluate.bind(this));
-    return callee.call(args);
+    let name = callee.name;
+    if (name === undefined) {
+      let args = expr.arguments.map(this.evaluate.bind(this));
+      return callee.call(args);
+    } else {
+      while (true) {
+        try {
+          if (this.stack.size() > 0 && name === this.stack.peek()) {
+            let args = expr.arguments.map(this.evaluate.bind(this));
+            this.stack.set(args);
+            throw new Interpreter.TailEndRecurrsion();
+          } else {
+            this.stack.push(name);
+            let args = expr.arguments.map(this.evaluate.bind(this));
+            this.stack.set(args);
+            let result = callee.call(args);
+            this.stack.pop();
+            return result;
+          }
+        } catch (err) {
+          if (!(err instanceof Interpreter.TailEndRecurrsion)) {
+            throw err;
+          } else {
+            let result = callee.call(this.stack.args());
+            this.stack.pop();
+            return result;
+          }
+        }
+      }
+    }
   }
 
   visitDefineStructure(expr: ir2.DefineStructure): void {
@@ -74,6 +107,9 @@ export default class Interpreter implements ir2.StmtVisitor {
   visitDefineVariable(expr: ir2.DefineVariable): void {
     let name = expr.identifier.name.lexeme;
     let value = this.evaluate(expr.expression);
+    if (value instanceof RacketLambda) {
+      value.name = name;
+    }
     this.environment.define(name, value);
     return;
   }
@@ -139,6 +175,8 @@ export default class Interpreter implements ir2.StmtVisitor {
         racket.error(err.msg);
       } else if (err instanceof DivByZero) {
         racket.error('/: division by zero');
+      } else if (err instanceof StackOverflow) {
+        racket.error('stack overflow');
       } else if (err instanceof StructureFunctionError) {
         racket.error(err.msg);
       } else {
@@ -162,6 +200,8 @@ export default class Interpreter implements ir2.StmtVisitor {
         racket.error(err.msg);
       } else if (err instanceof DivByZero) {
         racket.error('/: division by zero');
+      } else if (err instanceof StackOverflow) {
+        racket.error('stack overflow');
       } else if (err instanceof StructureFunctionError) {
         racket.error(err.msg);
       } else {

@@ -538,6 +538,8 @@ export class RacketString implements RacketValue {
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 export interface RacketCallable extends RacketValue {
+  name: string | undefined;
+
   /**
    * Call this callable.
    * @param args the arguments passed to this callable
@@ -546,6 +548,7 @@ export interface RacketCallable extends RacketValue {
 }
 
 export class RacketLambda implements RacketCallable {
+  name: string | undefined = undefined;
   readonly params: string[];
   readonly body: ir2.StmtToVisit;
   private readonly closure: Environment;
@@ -579,9 +582,11 @@ export class RacketLambda implements RacketCallable {
 type RacketStructureCallback = (args: RacketValue[]) => RacketValue;
 
 class RacketStructureFunction implements RacketCallable {
+  readonly name: string;
   readonly function: RacketStructureCallback;
 
-  constructor(func: RacketStructureCallback) {
+  constructor(name: string, func: RacketStructureCallback) {
+    this.name = name;
     this.function = func;
   }
 
@@ -618,7 +623,7 @@ export class RacketStructure implements RacketValue {
    * Produce a function that creates an instance of this Racket structure.
    */
   makeFunction(): RacketStructureFunction {
-    return new RacketStructureFunction((args: RacketValue[]): RacketInstance => {
+    return new RacketStructureFunction('make-' + this.name, (args: RacketValue[]): RacketInstance => {
       let functionName = 'make-' + this.name;
       let expected = this.fields.length;
       let received = args.length;
@@ -638,7 +643,7 @@ export class RacketStructure implements RacketValue {
    * Produce a function that determines whether some value is an instance of this structure.
    */
   isInstanceFunction(): RacketStructureFunction {
-    return new RacketStructureFunction((args: RacketValue[]): RacketBoolean => {
+    return new RacketStructureFunction(this.name + '?', (args: RacketValue[]): RacketBoolean => {
       let functionName = 'make-' + this.name;
         if (args.length === 0) {
           this.error(`${functionName}: expects 1 argument, but found none`);
@@ -657,8 +662,8 @@ export class RacketStructure implements RacketValue {
   getFunctions() : RacketStructureFunction[] {
     let functions: RacketStructureFunction[] = [];
     this.fields.forEach((field, i) => {
-      functions.push(new RacketStructureFunction((args: RacketValue[]): RacketValue => {
-        let functionName = `${this.name}-${field}`;
+      let functionName = `${this.name}-${field}`;
+      functions.push(new RacketStructureFunction(functionName, (args: RacketValue[]): RacketValue => {
         if (args.length === 0) {
           this.error(`${functionName}: expects 1 argument, but found none`);
         } else if (args.length > 1) {
