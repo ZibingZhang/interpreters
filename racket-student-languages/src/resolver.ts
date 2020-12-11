@@ -50,7 +50,7 @@ export default class Resolver implements ir1.StmtVisitor {
    * Visitor
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  visitGroup(expr: ir1.Group): undefined | ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.IfExpression | ir2.Quoted {
+  visitGroup(expr: ir1.Group): undefined | ir2.AndExpression | ir2.Call | ir2.DefineStructure | ir2.DefineVariable | ir2.Group | ir2.LambdaExpression | ir2.IfExpression | ir2.OrExpression | ir2.Quoted {
     let elements = expr.elements;
 
     if (this.resolvingQuoted) {
@@ -70,7 +70,10 @@ export default class Resolver implements ir1.StmtVisitor {
 
     if (callee instanceof ir1.Keyword) {
       let type = callee.token.type;
-      if (type === TokenType.CHECK_EXPECT) {
+      if (type === TokenType.AND) {
+        let result = this.andExpression(args);
+        return result;
+      } else if (type === TokenType.CHECK_EXPECT) {
         if (!this.atTopLevel) {
           reporter.resolver.nonTopLevelTest();
         } else if (args.length !== 2) {
@@ -95,6 +98,9 @@ export default class Resolver implements ir1.StmtVisitor {
         return result;
       } else if (type === TokenType.IF) {
         let result = this.ifExpression(args);
+        return result;
+      } if (type === TokenType.OR) {
+        let result = this.orExpression(args);
         return result;
       } else throw new UnreachableCode();
     } else if (callee instanceof ir1.Identifier) {
@@ -195,6 +201,13 @@ export default class Resolver implements ir1.StmtVisitor {
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
    * Group Sub-Cases
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  private andExpression(exprs: ir1.Stmt[]): ir2.AndExpression {
+    if (exprs.length < 2) {
+      reporter.resolver.andNotEnoughArguments(exprs.length);
+    }
+    return new ir2.AndExpression(exprs.map(this.evaluate.bind(this)));
+  }
 
   private define(exprs: ir1.Stmt[]): ir2.DefineVariable {
     if (!this.atTopLevel) {
@@ -384,6 +397,13 @@ export default class Resolver implements ir1.StmtVisitor {
       // return statement for typechecker
       return reporter.resolver.badLambdaParamListType(paramList);
     }
+  }
+
+  private orExpression(exprs: ir1.Stmt[]): ir2.OrExpression {
+    if (exprs.length < 2) {
+      reporter.resolver.andNotEnoughArguments(exprs.length);
+    }
+    return new ir2.OrExpression(exprs.map(this.evaluate.bind(this)));
   }
 
   private quoted(exprs: ir1.Stmt[]): ir2.Quoted {

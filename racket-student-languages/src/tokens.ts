@@ -16,7 +16,9 @@ export enum TokenType {
   DEFINE_STRUCT = 'define-struct',
   LAMBDA = 'lambda',
 
+  AND = 'and',
   IF = 'if',
+  OR = 'or',
 
   BOOLEAN = 'BOOLEAN',
   IDENTIFIER = 'IDENTIFIER',
@@ -51,5 +53,7 @@ export const KEYWORDS = new Map([
   [TokenType.DEFINE.valueOf(), TokenType.DEFINE],
   [TokenType.DEFINE_STRUCT.valueOf(), TokenType.DEFINE_STRUCT],
   [TokenType.LAMBDA.valueOf(), TokenType.LAMBDA],
-  [TokenType.IF.valueOf(), TokenType.IF]
+  [TokenType.AND.valueOf(), TokenType.AND],
+  [TokenType.IF.valueOf(), TokenType.IF],
+  [TokenType.OR.valueOf(), TokenType.OR],
 ]);;

@@ -26,6 +26,7 @@ export interface Expr extends StmtToVisit {}
  * A visitor for the Stmt interface.
  */
 export interface StmtVisitor {
+  visitAndExpression(expr: AndExpression): any;
   visitCall(expr: Call): any;
   visitDefineStructure(expr: DefineStructure): any;
   visitDefineVariable(expr: DefineVariable): any;
@@ -33,6 +34,7 @@ export interface StmtVisitor {
   visitIfExpression(expr: IfExpression): any;
   visitLambdaExpression(expr: LambdaExpression): any;
   visitLiteral(expr: Literal): any;
+  visitOrExpression(expr: OrExpression): any;
   visitQuoted(expr: Quoted): any;
   visitTestCase(expr: TestCase): any;
 }
@@ -41,9 +43,24 @@ export interface StmtVisitor {
  * Concrete Classes
  * = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = */
 
- /**
-  * A function call.
-  */
+/**
+ * An and expression.
+ */
+export class AndExpression implements StmtToVisit {
+  readonly expressions: StmtToVisit[];
+
+  constructor(exprs: StmtToVisit[]) {
+    this.expressions = exprs;
+  }
+
+  accept(visitor: StmtVisitor): any {
+    return visitor.visitAndExpression(this);
+  }
+}
+
+/**
+ * A function call.
+ */
 export class Call implements StmtToVisit {
   readonly callee: StmtToVisit;
   readonly arguments: StmtToVisit[];
@@ -154,6 +171,21 @@ export class Literal implements StmtToVisit {
 
   accept(visitor: StmtVisitor): any {
     return visitor.visitLiteral(this);
+  }
+}
+
+/**
+ * An and expression.
+ */
+export class OrExpression implements StmtToVisit {
+  readonly expressions: StmtToVisit[];
+
+  constructor(exprs: StmtToVisit[]) {
+    this.expressions = exprs;
+  }
+
+  accept(visitor: StmtVisitor): any {
+    return visitor.visitOrExpression(this);
   }
 }
 

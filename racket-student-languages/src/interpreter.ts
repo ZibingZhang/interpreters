@@ -51,6 +51,18 @@ export default class Interpreter implements ir2.StmtVisitor {
    * Visitor
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
+  visitAndExpression(expr: ir2.AndExpression): RacketValue {
+    for (let arg of expr.expressions) {
+      let value = this.evaluate(arg);
+      if (value === RACKET_FALSE) {
+        return RACKET_FALSE;
+      } else if (value !== RACKET_TRUE) {
+        this.error('and: question result is not true or false: ' + value.toString());
+      }
+    }
+    return RACKET_TRUE;
+  }
+
   visitCall(expr: ir2.Call): RacketValue {
     if (this.stack.size() > 1000) {
       throw new StackOverflow();
@@ -127,7 +139,7 @@ export default class Interpreter implements ir2.StmtVisitor {
     } else if (predicate === RACKET_FALSE) {
       return this.evaluate(expr.ifFalse);
     } else {
-      this.error(`if: question result is not true or false: ${predicate}`);
+      this.error('if: question result is not true or false: ' + predicate.toString());
     }
   }
 
@@ -137,6 +149,18 @@ export default class Interpreter implements ir2.StmtVisitor {
 
   visitLiteral(expr: ir2.Literal): RacketValue {
     return expr.value;
+  }
+
+  visitOrExpression(expr: ir2.OrExpression): RacketValue {
+    for (let arg of expr.expressions) {
+      let value = this.evaluate(arg);
+      if (value === RACKET_TRUE) {
+        return RACKET_TRUE;
+      } else if (value !== RACKET_FALSE) {
+        this.error('or: question result is not true or false: ' + value.toString());
+      }
+    }
+    return RACKET_FALSE;
   }
 
   visitQuoted(expr: ir2.Quoted): RacketValue {

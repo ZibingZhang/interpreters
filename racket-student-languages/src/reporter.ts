@@ -118,6 +118,19 @@ class ResolverErrorReporter {
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Group Sub-Case: And Expression
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  andNotEnoughArguments(args: number): never {
+    let baseMsg = 'and: expects at least 2 arguments, ';
+    if (args === 0) {
+      this.error(baseMsg + 'but found none');
+    } else {
+      this.error(baseMsg + 'but found only 1');
+    }
+  }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
    * Group Sub-Case: Define
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
@@ -350,6 +363,19 @@ class ResolverErrorReporter {
 
   expectedSingleExpressionLambdaBody(exprs: number): never {
     this.error(`lambda: expected only one expression for the function body, but found ${exprs - 2} extra part${exprs - 2 === 1 ? '' : 's'}`);
+  }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Group Sub-Case: Or Expression
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  orNotEnoughArguments(args: number): never {
+    let baseMsg = 'or: expects at least 2 arguments, ';
+    if (args === 0) {
+      this.error(baseMsg + 'but found none');
+    } else {
+      this.error(baseMsg + 'but found only 1');
+    }
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
