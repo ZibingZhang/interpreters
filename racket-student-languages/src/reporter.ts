@@ -113,10 +113,6 @@ class ResolverErrorReporter {
    * Visit Keyword
    * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-  elseNotInClause(): never {
-    this.error('else: not allowed here, because this is not a question in a clause');
-  }
-
   missingOpenParenthesis(keyword: string): never {
     this.error(`${keyword}: expected an open parenthesis before ${keyword}, but found none`);
   }
@@ -456,6 +452,10 @@ class ResolverErrorReporter {
     } else{
       this.error(name + ': this name was defined previously and cannot be re-defined');
     }
+  }
+
+  elseNotInClause(): never {
+    this.error('else: not allowed here, because this is not a question in a clause');
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

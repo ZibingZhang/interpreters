@@ -85,6 +85,8 @@ export default class Resolver implements ir1.StmtVisitor {
         }
       } else if (type === TokenType.COND) {
         return this.condExpression(args);
+      } else if (type === TokenType.ELSE) {
+        reporter.resolver.elseNotInClause();
       } else if (type === TokenType.DEFINE) {
         let inFunctionDefinition = this.inFunctionDefinition;
         this.inFunctionDefinition = true;
