@@ -34,7 +34,7 @@ export default class Interpreter implements ir2.StmtVisitor {
     }
   };
 
-  private static TailEndRecurrsion = class extends Error {};
+  private static TailEndRecursion = class extends Error {};
 
   environment: Environment = new Environment();
   stack: Stack = new Stack();
@@ -75,28 +75,22 @@ export default class Interpreter implements ir2.StmtVisitor {
     if (name === undefined) {
       let args = expr.arguments.map(this.evaluate.bind(this));
       return callee.call(args);
+    } else if (this.stack.size() > 0 && name === this.stack.peek()) {
+      let args = expr.arguments.map(this.evaluate.bind(this));
+      this.stack.set(args);
+      throw new Interpreter.TailEndRecursion();
     } else {
+      this.stack.push(name);
+      let args = expr.arguments.map(this.evaluate.bind(this));
+      this.stack.set(args);
       while (true) {
         try {
-          if (this.stack.size() > 0 && name === this.stack.peek()) {
-            let args = expr.arguments.map(this.evaluate.bind(this));
-            this.stack.set(args);
-            throw new Interpreter.TailEndRecurrsion();
-          } else {
-            this.stack.push(name);
-            let args = expr.arguments.map(this.evaluate.bind(this));
-            this.stack.set(args);
-            let result = callee.call(args);
-            this.stack.pop();
-            return result;
-          }
+          let result = callee.call(this.stack.args());
+          this.stack.pop();
+          return result;
         } catch (err) {
-          if (!(err instanceof Interpreter.TailEndRecurrsion)) {
+          if (!(err instanceof Interpreter.TailEndRecursion)) {
             throw err;
-          } else {
-            let result = callee.call(this.stack.args());
-            this.stack.pop();
-            return result;
           }
         }
       }
