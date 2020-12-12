@@ -135,7 +135,11 @@ export default class Interpreter implements ir2.StmtVisitor {
   }
 
   visitIdentifier(expr: ir2.Identifier): RacketValue {
-    let value = this.environment.get(expr.name.lexeme);
+    let name = expr.name.lexeme;
+    let value = this.environment.get(name);
+    if (value === undefined) {
+      this.error(name + ' is used here before its definition');
+    }
     return value;
   }
 

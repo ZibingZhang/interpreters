@@ -32,7 +32,7 @@ export class Environment {
    * Get the value the name is mapped to
    * @param name the mapped name
    */
-  get(name: string): RacketValue {
+  get(name: string): RacketValue | undefined {
     /* Note:
      *  It should be the case that an environment is never asked to retrieve a
      *  value that it does not have. This should be guaranteed at the resolver.
@@ -40,7 +40,7 @@ export class Environment {
     let value = this.values.get(name);
     if (value === undefined) {
       if (this.enclosing === undefined) {
-        throw new UnreachableCode();
+        return undefined;
       } else {
         return this.enclosing.get(name);
       }

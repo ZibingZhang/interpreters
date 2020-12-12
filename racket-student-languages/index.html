@@ -82,6 +82,14 @@ Note:
 (define (square-2 n) (* n n))
 (check-expect (square-1 1.23-56/78i) (square-2 1.23-56/78i))
 
+;; Structures
+(define-struct coord [x y])
+(define COORD-1 (make-coord 1 2))
+(check-expect (coord-x COORD-1) 1)
+(check-expect (coord-y COORD-1) 2)
+(check-expect (coord? COORD-1) true)
+(check-expect (coord? 1) false)
+
 ;; ========== Syntax ==========
 
 ;; If Expressions
@@ -134,6 +142,32 @@ Note:
 (define (fac2 n)
   (fac2-acc n 1))
 (check-expect (fac2 170) 7257415615307998967396728211129263114716991681296451376543577798900561843401706157852350749242617459511490991237838520776666022565442753025328900773207510902400430280058295603966612599658257104398558294257568966313439612262571094946806711205568880457193340212661452800000000000000000000000000000000000000000)
+
+;; Mutually Recursive
+(define fac3 
+  (lambda (n)
+     (if (zero? n)
+         1
+         (* n (fac4 (sub1 n))))))
+(define (fac4 n)
+  (if (zero? n)
+      1
+      (* n (fac3 (sub1 n)))))
+(check-expect (fac3 5) 120)
+(check-expect (fac4 5) 120)
+
+;; A Really Pathological Example of How Errors Work
+#|
+(if 1 2)
+(define)
+(x 1) x
+(define x (lambda (_ __) (y _)))
+(define x 1)
+(define y z)
+(x 1) x
+(make-x 1 2)
+(define-struct x [_ __])
+|#
 </pre>
 
 <script src='ace/ace.js' type='text/javascript' charset='utf-8'></script>

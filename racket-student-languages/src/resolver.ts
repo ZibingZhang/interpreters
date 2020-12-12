@@ -173,6 +173,23 @@ export default class Resolver implements ir1.StmtVisitor {
     let statements: ir2.StmtToVisit[] = [];
     try {
       for (let expr of exprs) {
+        if (expr instanceof ir1.Identifier) {
+          this.initialIdentifier(expr.name.lexeme);
+        } else if (expr instanceof ir1.Group && expr.elements.length > 0) {
+          let callee = expr.elements[0];
+          if (callee instanceof ir1.Keyword) {
+            if (callee.token.type === TokenType.DEFINE) {
+              this.initialDefine(expr.elements.slice(1));
+            } else if (callee.token.type === TokenType.DEFINE_STRUCT) {
+              this.initialDefineStructure(expr.elements.slice(1));
+            }
+          } else if (callee instanceof ir1.Identifier) {
+            this.initialCall(callee.name.lexeme);
+          }
+        }
+      }
+
+      for (let expr of exprs) {
         let statement = this.evaluate(expr);
         if (statement !== undefined){
           statements.push(statement);
@@ -203,6 +220,173 @@ export default class Resolver implements ir1.StmtVisitor {
 
   private evaluate(expr: ir1.Stmt): ir2.StmtToVisit {
     return expr.accept(this);
+  }
+
+  /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+   * Initial Steps for Top-Level Statements
+   * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
+
+  private initialCall(name: string): void {
+    let type = this.symbolTable.get(name);
+    if (type !== undefined) {
+      reporter.resolver.checkCalleeValueType(type, name);
+    }
+  }
+
+  private initialDefine(exprs: ir1.Stmt[]): void {
+    if (exprs.length === 0) {
+      reporter.resolver.emptyDefine();
+    }
+    let first = exprs[0];
+    if (first instanceof ir1.Group) {
+      this.initialDefineFunction(first, [...exprs].splice(1));
+    } else {
+      this.initialDefineVariable(exprs);
+    }
+  }
+
+  private initialDefineFunction(nameAndParamList: ir1.Group, exprs: ir1.Stmt[]): void {
+    if (nameAndParamList.elements.length === 0) {
+      reporter.resolver.missingFunctionName();
+    }
+    let identifier = nameAndParamList.elements[0];
+    if (!(identifier instanceof ir1.Identifier)) {
+      // return statement for typechecker
+      return reporter.resolver.badFunctionNameType(identifier);
+    }
+    let paramList = nameAndParamList.elements.slice(1);
+    if (paramList.length === 0) {
+      reporter.resolver.noFunctionParams();
+    }
+    this.symbolTable.define(identifier.name.lexeme, RacketValueType.FUNCTION, paramList.length);
+    for (let param of paramList) {
+      if (!(param instanceof ir1.Identifier)) {
+        reporter.resolver.badFunctionParamType(param);
+      }
+    }
+    if (exprs.length < 1) {
+      return reporter.resolver.missingFunctionBody();
+    } else if (exprs.length > 1) {
+      return reporter.resolver.expectedSingleExpressionFunctionBody(exprs.length);
+    }
+  }
+
+  private initialDefineStructure(exprs: ir1.Stmt[]): void {
+    if (exprs.length === 0) {
+      reporter.resolver.missingStructureName();
+    }
+    let identifier = exprs[0];
+    if (!(identifier instanceof ir1.Identifier)) {
+      // return statement for typechecker
+      return reporter.resolver.badStructureNameType(identifier);
+    }
+    let fieldNames = exprs[1];
+    if (fieldNames === undefined) {
+      // return statement for typechecker
+      return reporter.resolver.missingFieldNames();
+    } else if (!(fieldNames instanceof ir1.Group)) {
+      // return statement for typechecker
+      return reporter.resolver.badFieldNamesType(fieldNames);
+    }
+    let names: string[] = [];
+    for (let fieldName of fieldNames.elements) {
+      if (fieldName instanceof ir1.Identifier) {
+        names.push(fieldName.name.lexeme);
+      } else if (fieldName instanceof ir1.Keyword) {
+        names.push(fieldName.token.type.valueOf());
+      } else {
+        reporter.resolver.badFieldNameType(fieldName);
+      }
+    }
+    let structName = identifier.name.lexeme;
+    if (this.symbolTable.contains(structName)) {
+      reporter.resolver.duplicateName(structName);
+    } else if (this.symbolTable.contains(structName + '?')) {
+      reporter.resolver.duplicateName(structName + '?');
+    } else if (this.symbolTable.contains(`make-${structName}`)) {
+      reporter.resolver.duplicateName('make-' + structName);
+    }
+    for (let fieldName of names) {
+      if (this.symbolTable.contains(`${structName}-${fieldName}`)) {
+        reporter.resolver.duplicateName(`${structName}-${fieldName}`);
+      } else {
+        this.symbolTable.define(`${structName}-${fieldName}`, RacketValueType.FUNCTION, 1);
+      }
+    }
+    this.symbolTable.define(structName, RacketValueType.STRUCTURE);
+    this.symbolTable.define(structName + '?', RacketValueType.FUNCTION, 1);
+    this.symbolTable.define(`make-${structName}`, RacketValueType.FUNCTION, names.length);
+  }
+
+  private initialDefineVariable(exprs: ir1.Stmt[]): void {
+    let identifier = exprs[0];
+    if (!(identifier instanceof ir1.Identifier)) {
+      // return statement for typechecker
+      return reporter.resolver.badVariableNameType(identifier);
+    }
+    let name = identifier.name.lexeme;
+    if (KEYWORDS.get(name)) {
+      reporter.resolver.variableCannotUseKeywordName();
+    } else if (exprs.length === 1) {
+      reporter.resolver.missingVariableExpression(name);
+    } else if (exprs.length > 2) {
+      reporter.resolver.expectedSingleExpressionVariableValue(name, exprs.length);
+    }
+
+    let type = RacketValueType.VARIABLE;
+    let arity;
+    let body = exprs[1];
+    if (body instanceof ir1.Group) {
+      if (body.elements.length > 0) {
+        let first = body.elements[0];
+        if (first instanceof ir1.Keyword && first.token.type === TokenType.LAMBDA) {
+          type = RacketValueType.FUNCTION
+          arity = this.initialLambdaExpression(body.elements.slice(1)); 
+        }
+      }
+    }
+    if (this.symbolTable.contains(name)) {
+      reporter.resolver.duplicateName(name);
+    }
+    if (type === RacketValueType.VARIABLE) {
+      this.symbolTable.define(name, type);
+    } else if (type === RacketValueType.FUNCTION) {
+      this.symbolTable.define(name, type, arity);
+    } else throw new UnreachableCode();
+  }
+
+  private initialIdentifier(name: string): void {
+    let type = this.symbolTable.get(name);
+    if (type !== undefined) {
+      reporter.resolver.checkIdentifierType(type, this.evaluatingCallee, name);
+    }
+  }
+
+  private initialLambdaExpression(exprs: ir1.Stmt[]): number {
+    if (exprs.length === 0) {
+      reporter.resolver.missingLambdaParams();
+    }
+    let paramList = exprs[0];
+    if (!(paramList instanceof ir1.Group)) {
+      // return statement for typechecker
+      return reporter.resolver.badLambdaParamListType(paramList);
+    }
+
+    let params = paramList.elements;
+    if (params.length === 0) {
+      reporter.resolver.noLambdaParams();
+    }
+    for (let param of params) {
+      if (!(param instanceof ir1.Identifier)) {
+        reporter.resolver.badLambdaParamType(param);
+      }
+    }
+    if (exprs.length === 1) {
+      reporter.resolver.missingLambdaBody();
+    } else if (exprs.length > 2) {
+      reporter.resolver.expectedSingleExpressionLambdaBody(exprs.length);
+    }
+    return params.length;
   }
 
   /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -246,12 +430,10 @@ export default class Resolver implements ir1.StmtVisitor {
   private define(exprs: ir1.Stmt[]): ir2.DefineVariable {
     if (!this.atTopLevel) {
       reporter.resolver.nonTopLevelDefinition();
-    } else if (exprs.length === 0) {
-      reporter.resolver.emptyDefine();
     }
     let first = exprs[0];
     if (first instanceof ir1.Group) {
-      return this.defineFunction(first, [...exprs].splice(1));
+      return this.defineFunction(first, exprs.splice(1));
     } else {
       return this.defineVariable(exprs);
     }
@@ -262,127 +444,65 @@ export default class Resolver implements ir1.StmtVisitor {
       reporter.resolver.missingFunctionName();
     }
     let identifier = nameAndParamList.elements[0];
-    if (identifier instanceof ir1.Identifier) {
-      let paramList = [...nameAndParamList.elements].splice(1);
-      if (paramList.length === 0) {
-        reporter.resolver.noFunctionParams();
-      }
-      this.symbolTable.define(identifier.name.lexeme, RacketValueType.FUNCTION, paramList.length);
-      let enclosing = this.symbolTable;
-      this.symbolTable = new SymbolTable(enclosing);
-      let paramNames: Token[] = [];
-      for (let param of paramList) {
-        if (param instanceof ir1.Identifier) {
-          let paramName = param.name;
-          paramNames.push(paramName);
-          this.symbolTable.define(paramName.lexeme, RacketValueType.VARIABLE);
-        } else {
-          reporter.resolver.badFunctionParamType(param);
-        }
-      }
-      if (exprs.length === 1) {
-        let atTopLevel = this.atTopLevel;
-        this.atTopLevel = false;
-        let body = this.evaluate(exprs[0])
-        this.atTopLevel = atTopLevel;
-        this.symbolTable = enclosing;
-        return new ir2.DefineVariable(new ir2.Identifier(identifier.name), new ir2.LambdaExpression(paramNames, body));
-      } else if (exprs.length < 1) {
-        // return statement for typechecker
-        return reporter.resolver.missingFunctionBody();
-      } else {
-        // return statement for typechecker
-        return reporter.resolver.expectedSingleExpressionFunctionBody(exprs.length);
-      }
-    } else {
-      // return statement for typechecker
-      return reporter.resolver.badFunctionNameType(identifier);
+    if (!(identifier instanceof ir1.Identifier)) {
+      throw new UnreachableCode();
     }
+    let paramList = [...nameAndParamList.elements].splice(1);
+    this.symbolTable.define(identifier.name.lexeme, RacketValueType.FUNCTION, paramList.length);
+    let enclosing = this.symbolTable;
+    this.symbolTable = new SymbolTable(enclosing);
+    let paramNames: Token[] = [];
+    for (let param of paramList) {
+      if (!(param instanceof ir1.Identifier)) {
+        throw new UnreachableCode();
+      }
+      let paramName = param.name;
+      paramNames.push(paramName);
+      this.symbolTable.define(paramName.lexeme, RacketValueType.VARIABLE);
+    }
+    let atTopLevel = this.atTopLevel;
+    this.atTopLevel = false;
+    let body = this.evaluate(exprs[0])
+    this.atTopLevel = atTopLevel;
+    this.symbolTable = enclosing;
+    return new ir2.DefineVariable(new ir2.Identifier(identifier.name), new ir2.LambdaExpression(paramNames, body));
   }
 
   private defineStructure(exprs: ir1.Stmt[]): ir2.DefineStructure {
     if (!this.atTopLevel) {
       reporter.resolver.nonTopLevelStructureDefinition();
-    } else if (exprs.length === 0) {
-      reporter.resolver.missingStructureName();
     }
     let identifier = exprs[0];
-    if (identifier instanceof ir1.Identifier) {
-      let fieldNames = exprs[1];
-      if (fieldNames === undefined) {
-        // return statement for typechecker
-        return reporter.resolver.missingFieldNames();
-      } else if (fieldNames instanceof ir1.Group) {
-        let names: string[] = [];
-        for (let fieldName of fieldNames.elements) {
-          if (fieldName instanceof ir1.Identifier) {
-            names.push(fieldName.name.lexeme);
-          } else if (fieldName instanceof ir1.Keyword) {
-            names.push(fieldName.token.type.valueOf());
-          } else {
-            reporter.resolver.badFieldNameType(fieldName);
-          }
-        }
-        let structName = identifier.name.lexeme;
-        if (this.symbolTable.contains(structName)) {
-          reporter.resolver.duplicateName(structName);
-        } else if (this.symbolTable.contains(structName + '?')) {
-          reporter.resolver.duplicateName(structName + '?');
-        } else if (this.symbolTable.contains(`make-${structName}`)) {
-          reporter.resolver.duplicateName('make-' + structName);
-        }
-        for (let fieldName of names) {
-          if (this.symbolTable.contains(`${structName}-${fieldName}`)) {
-            reporter.resolver.duplicateName(`${structName}-${fieldName}`);
-          } else {
-            this.symbolTable.define(`${structName}-${fieldName}`, RacketValueType.FUNCTION, 1);
-          }
-        }
-        this.symbolTable.define(structName, RacketValueType.STRUCTURE);
-        this.symbolTable.define(structName + '?', RacketValueType.FUNCTION, 1);
-        this.symbolTable.define(`make-${structName}`, RacketValueType.FUNCTION, names.length);
-        return new ir2.DefineStructure(structName, names);
-      } else {
-        // return statement for typechecker
-        return reporter.resolver.badFieldNamesType(fieldNames);
-      }
-    } else {
-      // return statement for typechecker
-      return reporter.resolver.badStructureNameType(identifier);
+    if (!(identifier instanceof ir1.Identifier)) {
+      throw new UnreachableCode();
     }
+    let fieldNames = exprs[1];
+    if (!(fieldNames instanceof ir1.Group)) {
+      throw new UnreachableCode();
+    }
+    let names: string[] = [];
+    for (let fieldName of fieldNames.elements) {
+      if (fieldName instanceof ir1.Identifier) {
+        names.push(fieldName.name.lexeme);
+      } else if (fieldName instanceof ir1.Keyword) {
+        names.push(fieldName.token.type.valueOf());
+      } else {
+        throw new UnreachableCode();
+      }
+    }
+    let structName = identifier.name.lexeme;
+    return new ir2.DefineStructure(structName, names);
   }
 
   private defineVariable(exprs: ir1.Stmt[]): ir2.DefineVariable {
     let identifier = exprs[0];
-    if (identifier instanceof ir1.Identifier) {
-      let name = identifier.name.lexeme;
-      if (KEYWORDS.get(name)) {
-        reporter.resolver.variableCannotUseKeywordName();
-      } else if (this.symbolTable.contains(name)) {
-        reporter.resolver.duplicateName(name);
-      } else if (exprs.length === 1) {
-        reporter.resolver.missingVariableExpression(name);
-      } else if (exprs.length > 2) {
-        reporter.resolver.expectedSingleExpressionVariableValue(name, exprs.length);
-      }
-
-      let atTopLevel = this.atTopLevel;
-      this.atTopLevel = false;
-      let body = this.evaluate(exprs[1]);
-      this.atTopLevel = atTopLevel;
-      if (body instanceof ir2.Call
-          || body instanceof ir2.Identifier) {
-        this.symbolTable.define(name, RacketValueType.VARIABLE);
-      } else if (body instanceof ir2.LambdaExpression) {
-        this.symbolTable.define(name, RacketValueType.FUNCTION, body.names.length);
-      } else if (body instanceof ir2.Literal) {
-        this.symbolTable.define(name, RacketValueType.VARIABLE);
-      } else throw new UnreachableCode();
-      return new ir2.DefineVariable(new ir2.Identifier(identifier.name), this.evaluate(exprs[1]));
-    } else {
-      // return statement for typechecker
-      return reporter.resolver.badVariableNameType(identifier);
+    if (!(identifier instanceof ir1.Identifier)) {
+      throw new UnreachableCode();
     }
+    let atTopLevel = this.atTopLevel;
+    this.atTopLevel = false;
+    this.atTopLevel = atTopLevel;
+    return new ir2.DefineVariable(new ir2.Identifier(identifier.name), this.evaluate(exprs[1]));
   }
 
   private ifExpression(exprs: ir1.Stmt[]): ir2.IfExpression {
@@ -398,39 +518,26 @@ export default class Resolver implements ir1.StmtVisitor {
   private lambdaExpression(exprs: ir1.Stmt[]): ir2.LambdaExpression {
     if (!this.inFunctionDefinition) {
       reporter.resolver.lambdaNotInFunctionDefinition();
-    } else if (exprs.length === 0) {
-      reporter.resolver.missingLambdaParams();
     }
     let paramList = exprs[0];
     let paramNames: Token[] = [];
-    if (paramList instanceof ir1.Group) {
-      let params = paramList.elements;
-      if (params.length === 0) {
-        reporter.resolver.noLambdaParams();
-      }
-      for (let param of params) {
-        if (param instanceof ir1.Identifier) {
-          let paramName = param.name;
-          paramNames.push(paramName);
-          this.symbolTable.define(param.name.lexeme, RacketValueType.PARAMETER);
-        } else {
-          reporter.resolver.badLambdaParamType(param);
-        }
-      }
-      if (exprs.length === 1) {
-        reporter.resolver.missingLambdaBody();
-      } else if (exprs.length > 2) {
-        reporter.resolver.expectedSingleExpressionLambdaBody(exprs.length);
-      }
-      let atTopLevel = this.atTopLevel;
-      this.atTopLevel = false;
-      let body = this.evaluate(exprs[1]);
-      this.atTopLevel = atTopLevel;
-      return new ir2.LambdaExpression(paramNames, body);
-    } else {
-      // return statement for typechecker
-      return reporter.resolver.badLambdaParamListType(paramList);
+    if (!(paramList instanceof ir1.Group)) {
+      throw new UnreachableCode();
     }
+    let params = paramList.elements;
+    for (let param of params) {
+      if (!(param instanceof ir1.Identifier)) {
+          throw new UnreachableCode();
+      }
+      let paramName = param.name;
+      paramNames.push(paramName);
+      this.symbolTable.define(param.name.lexeme, RacketValueType.PARAMETER);
+    }
+    let atTopLevel = this.atTopLevel;
+    this.atTopLevel = false;
+    let body = this.evaluate(exprs[1]);
+    this.atTopLevel = atTopLevel;
+    return new ir2.LambdaExpression(paramNames, body);
   }
 
   private orExpression(exprs: ir1.Stmt[]): ir2.OrExpression {
