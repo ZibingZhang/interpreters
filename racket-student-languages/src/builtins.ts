@@ -10,6 +10,7 @@ import {
   isInexactFloat,
   isInteger,
   isList,
+  isNatural,
   isNumber,
   isRational,
   isReal,
@@ -78,6 +79,8 @@ export abstract class RacketBuiltInFunction implements RacketCallable {
       assertAtLeastNArguments(this.name, this.min, args.length);
     } else if (this.min === this.max) {
       assertExactlyNArguments(this.name, this.min, args.length);
+    } else if (this.min < this.max) {
+      assertRangeOfArguments(this.name, this.min, this.max, args);
     }
 
     // return bogus value for the typechecker
@@ -1296,6 +1299,31 @@ class Third extends RacketBuiltInFunction {
 * String Functions
 * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
+// TODO: functions which expect naturals should not accept inexact non-negative integers
+
+/* Signature:
+ *  (string-ith s i) → 1string?
+ *    s : string
+ *    i : natural-number
+ * Purpose Statement:
+ *    Extracts the `i`th 1-letter substring from `s`.
+ */
+class StringIth extends RacketBuiltInFunction {
+  constructor() {
+    super('string-ith', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketString {
+    super.call(args);
+    let string = assertNthString(this.name, args[0], 1).value;
+    let index = assertNthNatural(this.name, args[1], 2);
+    if (!(index.numerator < string.length)) {
+      this.error(`string-ith: expected an exact integer in [0, ${string.length}) (i.e., less than the length of the given string) for the second argument, but received ${index.toString()}`)
+    }
+    return new RacketString(string[Number(index.numerator)]);
+  }
+}
+
 /* Signature:
  *  (string=? s t) → boolean?
  *    s : string
@@ -1312,6 +1340,68 @@ class StringSymEqHuh extends RacketBuiltInFunction {
     super.call(args);
     let strings = assertListOfStrings(this.name, args);
     return toRacketBoolean(strings[0].equals(strings[1]));
+  }
+}
+
+/* Signature:
+ *  (substring s i j) → string
+ *    s : string
+ *    i : natural-number
+ *    j : natural-number
+ * Purpose Statement:
+ *    Extracts the substring starting at `i` up to `j` (or the end if `j` is
+ *    not provided).
+ */
+class Substring extends RacketBuiltInFunction {
+  constructor() {
+    super('substring', 2, 3);
+  }
+
+  call(args: RacketValue[]): RacketString {
+    super.call(args);
+    let stringValue = assertNthString(this.name, args[0], 1);
+    let string = stringValue.value;
+    let startValue = assertNthNatural(this.name, args[1], 2);
+    let endValue = args.length === 3 ? assertNthNatural(this.name, args[2], 3) : new RacketExactNumber(BigInt(string.length), 1n);
+    let start = startValue.numerator;
+    let end = endValue.numerator;
+    if (start > string.length) {
+      let errMsg = 'substring: starting index is out of range\n';
+      errMsg += `  starting index ${startValue.toString()}\n`;
+      errMsg += `  valid range: [0, ${string.length}]\n`;
+      errMsg += `  string: ${stringValue.toString()}`;
+      this.error(errMsg);
+    } else if (end > string.length) {
+      let errMsg = 'substring: ending index is out of range\n';
+      errMsg += `  ending index ${endValue.toString()}\n`;
+      errMsg += `  valid range: [0, ${string.length}]\n`;
+      errMsg += `  string: ${stringValue.toString()}`;
+      this.error(errMsg);
+    } else if (start > end) {
+      let errMsg = 'substring: ending index is smaller than starting index\n';
+      errMsg += `  ending index ${endValue.toString()}\n`;
+      errMsg += `  valid range: [0, ${string.length}]\n`;
+      errMsg += `  string: ${stringValue.toString()}`;
+      this.error(errMsg);
+    }
+    return new RacketString(string.substring(Number(start), Number(end)));
+  }
+}
+
+/* Signature:
+ *  (string? x) → boolean?
+ *    x : any/c
+ * Purpose Statement:
+ *    Determines whether a value is a string.
+ */
+class StringHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('string?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isString(args[0]));
   }
 }
 
@@ -1400,7 +1490,7 @@ function assertListOfLengthAtLeastN(name: string, minimum: number, received: Rac
  * @param expected the number of arguments expected
  * @param received the number of arguments received
  */
-function assertExactlyNArguments(name: string, expected: number, received: number):  void {
+function assertExactlyNArguments(name: string, expected: number, received: number): void {
   if (expected == received) {
     return;
   }
@@ -1419,14 +1509,64 @@ function assertExactlyNArguments(name: string, expected: number, received: numbe
 }
 
 /**
- * Assert that the arguments are all integers.
+ * Assert that the function has between `n` and `m` arguments.
  * @param name the name of the function
- * @param args the received arguments
+ * @param min the minimum number of arguments expected
+ * @param max the maximum number of arguments expected
+ * @param args the arguments received
+ */
+function assertRangeOfArguments(name: string, min: number, max: number, args: RacketValue[]): void {
+  if (min <= args.length && args.length <= max) {
+    return;
+  }
+  let errMsg = name + ': arity mismatch;\n';
+  errMsg += 'the number of arguments does not match the given number\n';
+  errMsg += `  expected ${min} to ${max}\n`;
+  errMsg += `  given ${args.length}\n`;
+  if (args.length > 0) {
+    errMsg += 'arguments...:';
+    for (let arg of args) {
+      errMsg += `\n   ${arg.toString()}`;
+    }
+  }
+  error(errMsg);
+}
+
+/**
+ * Assert that the argument is a list.
+ * @param name the name of the function
+ * @param args the received argument
  */
 function assertList(name: string, arg: RacketValue): RacketList {
   if (!isList(arg)) {
     // @ts-ignore
     error(`${name}: expects a list, given ${arg.toString()}`)
+  }
+  return arg;
+}
+
+/**
+ * Assert that the nth argument is a natural number.
+ * @param name the name of the function
+ * @param args the received argument
+ * @param nth the position of the argument
+ */
+function assertNthNatural(name: string, arg: RacketValue, nth: number): RacketExactNumber | RacketInexactFraction {
+  if (!isNatural(arg)) {
+    error(`${name}: expected a natural number for the ${nthString(nth)} argument, but received ${arg.toString()}`)
+  }
+  return arg;
+}
+
+/**
+ * Assert that the nth argument is a string.
+ * @param name the name of the function
+ * @param args the received argument
+ * @param nth the position of the argument
+ */
+function assertNthString(name: string, arg: RacketValue, nth: number): RacketString {
+  if (!isString(arg)) {
+    error(`${name}: expected a natural number for the ${nthString(nth)} argument, but received ${arg.toString()}`)
   }
   return arg;
 }
@@ -1498,7 +1638,7 @@ function assertListOfReals(name: string, args: RacketValue[]): RacketRealNumber[
 }
 
 /**
- * Assert that the arguments are all numbers.
+ * Assert that the arguments are all booleans.
  * @param name the name of the function
  * @param args the received arguments
  */
@@ -1576,6 +1716,18 @@ function error(msg: string): never {
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 /**
+ * Return the word equivalent of `nth`.
+ * @param number the `nth`
+ */
+function nthString(nth: number) {
+  if (nth === 1) {
+    return 'first';
+  } else if (nth === 2) {
+    return 'second';
+  } else throw new UnreachableCode();
+}
+
+/**
  * Convert a number to an ordinal.
  * 
  * Stolen shamelessly from
@@ -1602,7 +1754,7 @@ function ordinal(n: number): string {
  * Return the Racket equivalent of the boolean value.
  * @param bool the boolean value
  */
-function toRacketBoolean(bool: boolean) {
+function toRacketBoolean(bool: boolean): RacketBoolean {
   return bool ? RACKET_TRUE : RACKET_FALSE;
 }
 
@@ -1799,7 +1951,7 @@ addBuiltinFunction(new Third());
 // addBuiltinFunction(new StringContainsHuh());
 // addBuiltinFunction(new StringCopy());
 // addBuiltinFunction(new StringDowncase());
-// addBuiltinFunction(new StringIth());
+addBuiltinFunction(new StringIth());
 // addBuiltinFunction(new StringLength());
 // addBuiltinFunction(new StringLowerCaseHuh());
 // addBuiltinFunction(new StringNumericHuh());
@@ -1812,8 +1964,8 @@ addBuiltinFunction(new Third());
 addBuiltinFunction(new StringSymEqHuh());
 // addBuiltinFunction(new StringSymGeqHuh());
 // addBuiltinFunction(new StringSymGeHuh());
-// addBuiltinFunction(new StringHuh());
-// addBuiltinFunction(new Substring());
+addBuiltinFunction(new StringHuh());
+addBuiltinFunction(new Substring());
 /* Image Functions */
 // addBuiltinFunction(new ImageSymEqHuh());
 // addBuiltinFunction(new ImageHuh());

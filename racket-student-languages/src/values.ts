@@ -1005,6 +1005,10 @@ export function isList(object: any): object is RacketList {
     || object === RACKET_EMPTY_LIST;
 }
 
+export function isNatural(object: any): object is RacketExactNumber | RacketInexactFraction {
+  return isRational(object) && object.denominator === 1n && !(object.numerator < 0);
+}
+
 export function isNumber(object: any): object is RacketNumber {
   return object instanceof RacketNumber;
 }
