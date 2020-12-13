@@ -13,6 +13,7 @@ import Stack from './stack.js';
 import { 
   isBoolean,
   isCallable, 
+  isInexact, 
   RacketLambda,
   RacketStructure,
   RacketSymbol,
@@ -185,7 +186,12 @@ export default class Interpreter implements ir2.StmtVisitor {
   visitTestCase(expr: ir2.TestCase): void {
     let actual = this.evaluate(expr.actual);
     let expected = this.evaluate(expr.expected);
-    if (!actual.equals(expected)) {
+    if (isInexact(expected)) {
+      this.error(`check-expect cannot compare inexact numbers. Try (check-within test ${expected.toString().substr(2)} range).`);
+    } else if (isInexact(actual)) {
+      // TODO: not the actual error
+      this.error(`check-expect: second argument of equality cannot be an inexact number, given ${actual.toString()}`);
+    } else if (!actual.equals(expected)) {
       this.error(`Actual value ${actual.toString()} differs from ${expected.toString()}, the expected value.`);
     }
   }
