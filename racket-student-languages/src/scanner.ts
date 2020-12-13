@@ -109,6 +109,7 @@ class Scanner {
     let state = State.TOP;
     for (let group of groups) {
       switch (true) {
+        case state === State.STRING:
         case state === State.LINE_COMMENT:
         case state === State.BLOCK_COMMENT:
         case state === State.MAYBE_END_BLOCK_COMMENT: {
@@ -762,7 +763,7 @@ class Scanner {
           }
           case state === State.STRING:
           case state === State.ESCAPED_CHAR: {
-            this.error('expected a closing `"`');
+            break;
           }
           case state === State.IMAGINARY_NUMERATOR:
           case state === State.IMAGINARY_DENOMINATOR:
@@ -787,6 +788,19 @@ class Scanner {
         } else if (!(err instanceof Scanner.NextLexeme)) {
           throw err;
         }
+      }
+    }
+
+    switch(true) {
+      case state === State.STRING:
+      case state === State.ESCAPED_CHAR: {
+        racket.error('expected a closing `"`');
+        break;
+      }
+      case state === State.BLOCK_COMMENT:
+      case state === State.MAYBE_END_BLOCK_COMMENT: {
+        racket.error('read-syntax: end of file in `#|` comment');
+        break;
       }
     }
 
