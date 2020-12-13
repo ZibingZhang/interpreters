@@ -236,6 +236,20 @@ export abstract class RacketRealNumber extends RacketNumber {
   geq(other: RacketRealNumber): boolean {
     throw new Error('Method not implemented.');
   }
+
+  /**
+   * Returns a new Racket number that is the closest integer above this.
+   */
+  ceiling(): RacketRealNumber {
+    throw new Error('Method not implemented.');
+  }
+
+  /**
+   * Returns a new Racket number that is the closest integer below this.
+   */
+  floor(): RacketRealNumber {
+    throw new Error('Method not implemented.');
+  }
 }
 
 /**
@@ -343,6 +357,19 @@ export class RacketExactNumber extends RacketRealNumber {
     } else {
       return this.numerator * other.denominator >= other.numerator * this.denominator;
     }
+  }
+
+  ceiling(): RacketExactNumber {
+    let floor = this.numerator / this.denominator;
+    if (floor * this.denominator != this.numerator) {
+      return new RacketExactNumber(floor + 1n, 1n);
+    } else {
+      return new RacketExactNumber(floor, 1n);
+    }
+  }
+
+  floor(): RacketExactNumber {
+    return new RacketExactNumber(this.numerator / this.denominator, 1n);
   }
 }
 
@@ -460,6 +487,19 @@ export class RacketInexactFraction extends RacketInexactNumber {
       return this.numerator * other.denominator >= other.numerator * this.denominator;
     }
   }
+
+  ceiling(): RacketInexactFraction {
+    let floor = this.numerator / this.denominator;
+    if (floor * this.denominator != this.numerator) {
+      return new RacketInexactFraction(floor + 1n, 1n);
+    } else {
+      return new RacketInexactFraction(floor, 1n);
+    }
+  }
+
+  floor(): RacketInexactFraction {
+    return new RacketInexactFraction(this.numerator / this.denominator, 1n);
+  }
 }
 
 /**
@@ -566,6 +606,14 @@ export class RacketInexactFloat extends RacketInexactNumber {
     } else if (other instanceof RacketInexactFloat) {
       return other.value >= this.value;
     } else throw new UnreachableCode();
+  }
+
+  ceiling(): RacketInexactFloat {
+    return new RacketInexactFloat(Math.ceil(this.value));
+  }
+
+  floor(): RacketInexactFloat {
+    return new RacketInexactFloat(Math.floor(this.value));
   }
 }
 
@@ -917,7 +965,11 @@ export function isInexact(object: any): object is RacketInexactNumber {
   return object instanceof RacketInexactNumber;
 }
 
-function isInexactFloat(object: any): object is RacketInexactFloat {
+export function isInteger(object: any): object is RacketExactNumber | RacketInexactFraction {
+  return isRational(object) && object.denominator == 1n;
+}
+
+export function isInexactFloat(object: any): object is RacketInexactFloat {
   return object instanceof RacketInexactFloat;
 }
 

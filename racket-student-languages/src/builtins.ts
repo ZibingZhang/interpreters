@@ -5,6 +5,8 @@ import {
   isComplex,
   isExact,
   isInexact,
+  isInexactFloat,
+  isInteger,
   isList,
   isNumber,
   isRational,
@@ -338,6 +340,42 @@ class Abs extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ * (add1 x) → number
+ *    x : number
+ * Purpose Statement:
+ *    Increments the given number.
+ */
+class Add1 extends RacketBuiltInFunction {
+  constructor() {
+    super('add1', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketNumber {
+    super.call(args);
+    let numbers = assertListOfNumbers(this.name, args);
+    return numbers[0].add(new RacketExactNumber(1n, 1n));
+  }
+}
+
+/* Signature:
+ * (ceiling x) → integer
+ *    x : real
+ * Purpose Statement:
+ *    Determines the closest integer (exact or inexact) above a real number. See `round`.
+ */
+class Ceiling extends RacketBuiltInFunction {
+  constructor() {
+    super('ceiling', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketNumber {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    return reals[0].ceiling();
+  }
+}
+
+/* Signature:
  * (complex? x) → boolean?
  *    x : real
  * Purpose Statement:
@@ -351,6 +389,24 @@ class ComplexHuh extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketBoolean {
     super.call(args);
     return toRacketBoolean(isComplex(args[0]));
+  }
+}
+
+/* Signature:
+ * (even? x) → boolean?
+ *    x : integer
+ * Purpose Statement:
+ *    Determines if some integer (exact or inexact) is even or not. 
+ */
+class EvenHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('even?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let integers = assertListOfIntegers(this.name, args);
+    return toRacketBoolean(integers[0].numerator % 2n === 0n);
   }
 }
 
@@ -369,6 +425,24 @@ class ExactHuh extends RacketBuiltInFunction {
     super.call(args);
     assertListOfNumbers(this.name, args);
     return toRacketBoolean(isExact(args[0]));
+  }
+}
+
+/* Signature:
+ * (floor x) → integer
+ *    x : real
+ * Purpose Statement:
+ *    Determines the closest integer (exact or inexact) below a real number. See `round`.
+ */
+class Floor extends RacketBuiltInFunction {
+  constructor() {
+    super('floor', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketNumber {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    return reals[0].floor();
   }
 }
 
@@ -403,8 +477,7 @@ class IntegerHuh extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketBoolean {
     super.call(args);
-    let value = args[0];
-    return toRacketBoolean(isRational(value) && value.denominator === 0n);
+    return toRacketBoolean(isInteger(args[0]));
   }
 }
 
@@ -430,6 +503,193 @@ class MakeRectangular extends RacketBuiltInFunction {
     } else {
       return new RacketComplexNumber(real, imaginary);
     }
+  }
+}
+
+/* Signature:
+ * (max x y ...) → real
+ *    x : real
+ *    y : real
+ * Purpose Statement:
+ *    Determines the largest number—aka, the maximum.
+ */
+class Max extends RacketBuiltInFunction {
+  constructor() {
+    super('max', 1, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketRealNumber {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    if (args.length === 1) {
+      return reals[0];
+    } else {
+      let largest: RacketRealNumber = reals[0];
+      for (let idx = 1; idx < reals.length; idx++) {
+        let next = reals[idx];
+        if (isInexactFloat(next) && isNaN(next.value)) {
+          return next;
+        } else if (next.gt(largest)) {
+          largest = next;
+        }
+      }
+      return largest;
+    }
+  }
+}
+
+/* Signature:
+ * (min x y ...) → real
+ *    x : real
+ *    y : real
+ * Purpose Statement:
+ *    Determines the smallest number—aka, the minimum.
+ */
+class Min extends RacketBuiltInFunction {
+  constructor() {
+    super('min', 1, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketRealNumber {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    if (args.length === 1) {
+      return reals[0];
+    } else {
+      let smallest: RacketRealNumber = reals[0];
+      for (let idx = 1; idx < reals.length; idx++) {
+        let next = reals[idx];
+        if (isInexactFloat(next) && isNaN(next.value)) {
+          return next;
+        } else if (next.lt(smallest)) {
+          smallest = next;
+        }
+      }
+      return smallest;
+    }
+  }
+}
+
+/* Signature:
+ * (negative? x) → boolean?
+ *    x : real
+ * Purpose Statement:
+ *    Determines if some real number is strictly smaller than zero.
+ */
+class NegativeHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('negative?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    return toRacketBoolean(reals[0].isNegative());
+  }
+}
+
+/* Signature:
+ * (number->string? x) → string
+ *    x : number
+ * Purpose Statement:
+ *    Converts a number to a string. 
+ */
+class NumberToString extends RacketBuiltInFunction {
+  constructor() {
+    super('number->string', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketString {
+    super.call(args);
+    let numbers = assertListOfNumbers(this.name, args);
+    return new RacketString(numbers[0].toString());
+  }
+}
+
+/* Signature:
+ * (number? n) → boolean?
+ *    n : any/c
+ * Purpose Statement:
+ *    Determines whether some value is a number.
+ */
+class NumberHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('number?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isNumber(args[0]));
+  }
+}
+
+/* Signature:
+ * (odd? x) → boolean?
+ *    x : integer
+ * Purpose Statement:
+ *    Determines if some integer (exact or inexact) is odd or not. 
+ */
+class OddHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('odd?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let integers = assertListOfIntegers(this.name, args);
+    return toRacketBoolean(integers[0].numerator % 2n === 1n);
+  }
+}
+
+/* Signature:
+ * (positive? x) → boolean?
+ *    x : real
+ * Purpose Statement:
+ *    Determines if some real number is strictly larger than zero.
+ */
+class PositiveHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('positive?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    return toRacketBoolean(reals[0].isPositive());
+  }
+}
+
+/* Signature:
+ * (rational? x) → boolean?
+ *    x : any/c
+ * Purpose Statement:
+ *    Determines whether some value is a rational number.
+ */
+class RationalHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('rational?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isRational(args[0]));
+  }
+}
+
+/* Signature:
+ * (real? x) → boolean?
+ *    x : any/c
+ * Purpose Statement:
+ *    Determines whether some value is a real number.
+ */
+class RealHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('real?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isReal(args[0]));
   }
 }
 
@@ -760,6 +1020,28 @@ function assertExactlyNArguments(name: string, expected: number, received: numbe
 }
 
 /**
+ * Assert that the arguments are all integers.
+ * @param name the name of the function
+ * @param args the received arguments
+ */
+function assertListOfIntegers(name: string, args: RacketValue[]): (RacketExactNumber | RacketInexactFraction)[] {
+  let integers: (RacketExactNumber | RacketInexactFraction)[] = [];
+  args.forEach((arg, idx) => {
+    if (isCallable(arg)) {
+      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
+    } else if (!isInteger(arg)) {
+      if (args.length === 1) {
+        error(`${name}: expects integer, given ${arg.toString()}`);
+      } else {
+        error(`${name}: expects integer as ${ordinal(idx + 1)} argument, given ${arg.toString()}`);
+      }
+    }
+    integers.push(arg);
+  });
+  return integers;
+}
+
+/**
  * Assert that the arguments are all numbers.
  * @param name the name of the function
  * @param args the received arguments
@@ -951,23 +1233,23 @@ addBuiltinFunction(new SymGt());
 addBuiltinFunction(new SymGeq());
 addBuiltinFunction(new Abs());
 // addBuiltinFunction(new Acos());
-// addBuiltinFunction(new Add1());
+addBuiltinFunction(new Add1());
 // addBuiltinFunction(new Angle());
 // addBuiltinFunction(new Asin());
 // addBuiltinFunction(new Atan());
-// addBuiltinFunction(new Ceiling());
+addBuiltinFunction(new Ceiling());
 addBuiltinFunction(new ComplexHuh());
 // addBuiltinFunction(new Conjugate());
 // addBuiltinFunction(new Cos());
 // addBuiltinFunction(new Cosh());
 // addBuiltinFunction(new CurrentSeconds());
 // addBuiltinFunction(new Denominator());
-// addBuiltinFunction(new EvenHuh());
+addBuiltinFunction(new EvenHuh());
 // addBuiltinFunction(new ExactToInexact());
 addBuiltinFunction(new ExactHuh());
 // addBuiltinFunction(new Exp());
 // addBuiltinFunction(new Expt());
-// addBuiltinFunction(new Floor());
+addBuiltinFunction(new Floor());
 // addBuiltinFunction(new Gcd());
 // addBuiltinFunction(new ImagPart());
 // addBuiltinFunction(new InexactToExact());
@@ -980,21 +1262,21 @@ addBuiltinFunction(new IntegerHuh());
 // addBuiltinFunction(new Magnitude());
 // addBuiltinFunction(new MakePolar());
 addBuiltinFunction(new MakeRectangular());
-// addBuiltinFunction(new Max());
-// addBuiltinFunction(new Min());
+addBuiltinFunction(new Max());
+addBuiltinFunction(new Min());
 // addBuiltinFunction(new Modulo());
-// addBuiltinFunction(new NegativeHuh());
-// addBuiltinFunction(new NumberToString());
+addBuiltinFunction(new NegativeHuh());
+addBuiltinFunction(new NumberToString());
 // addBuiltinFunction(new NumberToStringDigits());
-// addBuiltinFunction(new NumberHuh());
+addBuiltinFunction(new NumberHuh());
 // addBuiltinFunction(new Numerator());
-// addBuiltinFunction(new OddHuh());
-// addBuiltinFunction(new PositiveHuh());
+addBuiltinFunction(new OddHuh());
+addBuiltinFunction(new PositiveHuh());
 // addBuiltinFunction(new Quotient());
 // addBuiltinFunction(new Random());
-// addBuiltinFunction(new RationalHuh());
+addBuiltinFunction(new RationalHuh());
 // addBuiltinFunction(new RealPart());
-// addBuiltinFunction(new RealHuh());
+addBuiltinFunction(new RealHuh());
 // addBuiltinFunction(new Remainder());
 // addBuiltinFunction(new Round());
 addBuiltinFunction(new Sgn());
