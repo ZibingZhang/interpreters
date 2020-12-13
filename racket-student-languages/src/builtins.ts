@@ -4,6 +4,7 @@ import {
   isCallable,
   isComplex,
   isConstructed,
+  isEmpty,
   isExact,
   isInexact,
   isInexactFloat,
@@ -19,6 +20,7 @@ import {
   RacketComplexNumber,
   RacketConstructedList,
   RacketExactNumber, 
+  RacketInexactFloat, 
   RacketInexactFraction,
   RacketList,
   RacketNumber, 
@@ -72,7 +74,7 @@ export abstract class RacketBuiltInFunction implements RacketCallable {
   }
   
   call(args: RacketValue[]): RacketValue {
-    if (this.max === Infinity) {
+    if (this.max === Infinity && this.min > 0) {
       assertAtLeastNArguments(this.name, this.min, args.length);
     } else if (this.min === this.max) {
       assertExactlyNArguments(this.name, this.min, args.length);
@@ -369,7 +371,7 @@ class Ceiling extends RacketBuiltInFunction {
     super('ceiling', 1, 1);
   }
 
-  call(args: RacketValue[]): RacketNumber {
+  call(args: RacketValue[]): RacketExactNumber | RacketInexactFraction {
     super.call(args);
     let reals = assertListOfReals(this.name, args);
     return reals[0].ceiling();
@@ -412,6 +414,24 @@ class EvenHuh extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ * (exact->inexact x) → number
+ *    x : number
+ * Purpose Statement:
+ *    Converts an exact number to an inexact one.
+ */
+class ExactToInexact extends RacketBuiltInFunction {
+  constructor() {
+    super('exact->inexact', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketInexactFloat | RacketInexactFraction | RacketComplexNumber {
+    super.call(args);
+    let numbers = assertListOfNumbers(this.name, args);
+    return numbers[0].inexact();
+  }
+}
+
+/* Signature:
  * (exact? x) → boolean?
  *    x : number
  * Purpose Statement:
@@ -440,7 +460,7 @@ class Floor extends RacketBuiltInFunction {
     super('floor', 1, 1);
   }
 
-  call(args: RacketValue[]): RacketNumber {
+  call(args: RacketValue[]): RacketExactNumber | RacketInexactFraction {
     super.call(args);
     let reals = assertListOfReals(this.name, args);
     return reals[0].floor();
@@ -567,6 +587,47 @@ class Min extends RacketBuiltInFunction {
         }
       }
       return smallest;
+    }
+  }
+}
+
+/* Signature:
+ * (modulo x y) → integer
+ *    x : integer
+ *    y : integer
+ * Purpose Statement:
+ *    Finds the remainder of the division of the first number by the second.
+ */
+class Modulo extends RacketBuiltInFunction {
+  constructor() {
+    super('modulo', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketExactNumber | RacketInexactFraction {
+    super.call(args);
+    let integers = assertListOfIntegers(this.name, args);
+    let number = integers[0].numerator;
+    let modulus = integers[1].numerator;
+    let exact = isExact(integers[0]) && isExact(integers[1]);
+    let numerator: bigint;
+    if (modulus === 0n) {
+      this.error('modulo: undefined for 0');
+    } else if (number === 0n) {
+      numerator = 0n;
+    } else if (modulus > 0) {
+      // https://web.archive.org/web/20090717035140if_/javascript.about.com/od/problemsolving/a/modulobug.htm
+      numerator = ((number % modulus) + modulus) % modulus;
+    } else {
+      if (number > 0n) {
+        numerator = (number % (-1n * modulus)) + modulus;
+      } else {
+        numerator = number % modulus;
+      }
+    }
+    if (exact) {
+      return new RacketExactNumber(numerator, 1n);
+    } else {
+      return new RacketInexactFraction(numerator, 1n);
     }
   }
 }
@@ -917,6 +978,44 @@ class SymbolHuh extends RacketBuiltInFunction {
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 /* Signature:
+ * (append x y z ...) → list?
+ *    x : list?
+ *    y : list?
+ *    z : list?
+ * Purpose Statement:
+ *    Creates a single list from several, by concatenation of the items.
+ */
+class Append extends RacketBuiltInFunction {
+  constructor() {
+    super('append', 2, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    if (!isList(args[args.length - 1])) {
+      this.error(`append: last argument must be a list, but received ${args[args.length-1].toString()}`);
+    }
+    let elements: RacketValue[] = [];
+    for (let arg of args) {
+      if (!isList(arg)) {
+        // @ts-ignore
+        this.error(`append: expects a list, given ${arg.toString()}`);
+      }
+      let list = arg;
+      while (isConstructed(list)) {
+        elements.push(list.first);
+        list = list.rest;
+      }
+    }
+    let list: RacketList = RACKET_EMPTY_LIST;
+    for (let idx = elements.length - 1; idx >= 0; idx--) {
+      list = new RacketConstructedList(elements[idx], list);
+    }
+    return list;
+  }
+}
+
+/* Signature:
  *  (cons x y) → list?
  *    x : any/x
  *    y : list?
@@ -938,6 +1037,59 @@ class Cons extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ *  (eighth x) → any/c
+ *    x : list?
+ * Purpose Statement:
+ *    Selects the eighth item of a non-empty list.
+ */
+class Eighth extends RacketBuiltInFunction {
+  constructor() {
+    super('eighth', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 8, args[0])
+    return list.first;
+  }
+}
+
+/* Signature:
+ *  (empty? x) → boolean?
+ *    x : any/c
+ * Purpose Statement:
+ *    Determines whether some value is the empty list.
+ */
+class EmptyHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('empty?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isEmpty(args[0]));
+  }
+}
+
+/* Signature:
+ *  (fifth x) → any/c
+ *    x : list?
+ * Purpose Statement:
+ *    Selects the fifth item of a non-empty list.
+ */
+class Fifth extends RacketBuiltInFunction {
+  constructor() {
+    super('fifth', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 5, args[0])
+    return list.first;
+  }
+}
+
+/* Signature:
  *  (first x) → any/c
  *    x : cons?
  * Purpose Statement:
@@ -951,10 +1103,86 @@ class First extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketValue {
     super.call(args);
     let list = assertListOfLengthAtLeastN(this.name, 1, args[0])
-    if (!isConstructed(list)) {
-      throw new UnreachableCode();
-    }
     return list.first;
+  }
+}
+
+/* Signature:
+ *  (fourth x) → any/c
+ *    x : list?
+ * Purpose Statement:
+ *    Selects the fourth item of a non-empty list.
+ */
+class Fourth extends RacketBuiltInFunction {
+  constructor() {
+    super('fourth', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 4, args[0])
+    return list.first;
+  }
+}
+
+/* Signature:
+ *  (length x) → natural-number?
+ *    x : any/c
+ * Purpose Statement:
+ *    Evaluates the number of items on a list.
+ */
+class Length extends RacketBuiltInFunction {
+  constructor() {
+    super('length', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketExactNumber {
+    super.call(args);
+    let list = assertList(this.name, args[0]);
+    let length = 0n;
+    while (isConstructed(list)) {
+      length++;
+      list = list.rest;
+    }
+    return new RacketExactNumber(length, 1n);
+  }
+}
+
+/* Signature:
+ *  (list x ...) → list?
+ *    x : any/c
+ * Purpose Statement:
+ *    Constructs a list of its arguments.
+ */
+class List extends RacketBuiltInFunction {
+  constructor() {
+    super('list', 0, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    let list = RACKET_EMPTY_LIST;
+    for (let idx = args.length - 1; idx >= 0; idx--) {
+      list = new RacketConstructedList(args[idx], list);
+    }
+    return list;
+  }
+}
+
+/* Signature:
+ *  (list? x) → boolean?
+ *    x : any
+ * Purpose Statement:
+ *    Checks whether the given value is a list.
+ */
+class ListHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('list?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    return toRacketBoolean(isList(args[0]));
   }
 }
 
@@ -972,9 +1200,6 @@ class Rest extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketValue {
     super.call(args);
     let list = assertListOfLengthAtLeastN(this.name, 1, args[0])
-    if (!isConstructed(list)) {
-      throw new UnreachableCode();
-    }
     return list.rest;
   }
 }
@@ -993,6 +1218,69 @@ class Second extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketValue {
     super.call(args);
     let list = assertListOfLengthAtLeastN(this.name, 2, args[0])
+    if (!isConstructed(list)) {
+      throw new UnreachableCode();
+    }
+    return list.first;
+  }
+}
+
+/* Signature:
+ *  (seventh x) → any/c
+ *    x : list?
+ * Purpose Statement:
+ *    Selects the seventh item of a non-empty list. 
+ */
+class Seventh extends RacketBuiltInFunction {
+  constructor() {
+    super('seventh', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 7, args[0])
+    if (!isConstructed(list)) {
+      throw new UnreachableCode();
+    }
+    return list.first;
+  }
+}
+
+/* Signature:
+ *  (sixth x) → any/c
+ *    x : list?
+ * Purpose Statement:
+ *    Selects the sixth item of a non-empty list. 
+ */
+class Sixth extends RacketBuiltInFunction {
+  constructor() {
+    super('sixth', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 6, args[0])
+    if (!isConstructed(list)) {
+      throw new UnreachableCode();
+    }
+    return list.first;
+  }
+}
+
+/* Signature:
+ *  (third x) → any/c
+ *    x : list?
+ * Purpose Statement:
+ *    Selects the third item of a non-empty list. 
+ */
+class Third extends RacketBuiltInFunction {
+  constructor() {
+    super('third', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 3, args[0])
     if (!isConstructed(list)) {
       throw new UnreachableCode();
     }
@@ -1082,7 +1370,7 @@ function assertAtLeastNArguments(name: string, minimum: number, received: number
  * @param minimum the minimum number of elements expected
  * @param received the value received
  */
-function assertListOfLengthAtLeastN(name: string, minimum: number, received: RacketValue): RacketList {
+function assertListOfLengthAtLeastN(name: string, minimum: number, received: RacketValue): RacketConstructedList {
   let list = received;
   for (let count = 0; count < minimum; count++) {
     if (!isConstructed(list)) {
@@ -1099,6 +1387,9 @@ function assertListOfLengthAtLeastN(name: string, minimum: number, received: Rac
       break;
     }
     list = list.rest;
+  }
+  if (!isConstructed(list)) {
+    throw new UnreachableCode();
   }
   return list;
 }
@@ -1125,6 +1416,19 @@ function assertExactlyNArguments(name: string, expected: number, received: numbe
     }
   }
   error(errMsg);
+}
+
+/**
+ * Assert that the arguments are all integers.
+ * @param name the name of the function
+ * @param args the received arguments
+ */
+function assertList(name: string, arg: RacketValue): RacketList {
+  if (!isList(arg)) {
+    // @ts-ignore
+    error(`${name}: expects a list, given ${arg.toString()}`)
+  }
+  return arg;
 }
 
 /**
@@ -1353,7 +1657,7 @@ addBuiltinFunction(new ComplexHuh());
 // addBuiltinFunction(new CurrentSeconds());
 // addBuiltinFunction(new Denominator());
 addBuiltinFunction(new EvenHuh());
-// addBuiltinFunction(new ExactToInexact());
+addBuiltinFunction(new ExactToInexact());
 addBuiltinFunction(new ExactHuh());
 // addBuiltinFunction(new Exp());
 // addBuiltinFunction(new Expt());
@@ -1372,7 +1676,7 @@ addBuiltinFunction(new IntegerHuh());
 addBuiltinFunction(new MakeRectangular());
 addBuiltinFunction(new Max());
 addBuiltinFunction(new Min());
-// addBuiltinFunction(new Modulo());
+addBuiltinFunction(new Modulo());
 addBuiltinFunction(new NegativeHuh());
 addBuiltinFunction(new NumberToString());
 // addBuiltinFunction(new NumberToStringDigits());
@@ -1406,7 +1710,7 @@ addBuiltinFunction(new SymbolToString());
 addBuiltinFunction(new SymbolSymEqHuh());
 addBuiltinFunction(new SymbolHuh());
 /* List Functions */
-// addBuiltinFunction(new Append());
+addBuiltinFunction(new Append());
 // addBuiltinFunction(new Assoc());
 // addBuiltinFunction(new Assq());
 // addBuiltinFunction(new Caaar());
@@ -1425,16 +1729,16 @@ addBuiltinFunction(new SymbolHuh());
 // addBuiltinFunction(new Cddr());
 // addBuiltinFunction(new Cdr());
 addBuiltinFunction(new Cons());
-// addBuiltinFunction(new Eighth());
-// addBuiltinFunction(new EmptyHuh());
-// addBuiltinFunction(new Fifth());
+addBuiltinFunction(new Eighth());
+addBuiltinFunction(new EmptyHuh());
+addBuiltinFunction(new Fifth());
 addBuiltinFunction(new First());
-// addBuiltinFunction(new Fourth());
-// addBuiltinFunction(new Length());
-// addBuiltinFunction(new List());
+addBuiltinFunction(new Fourth());
+addBuiltinFunction(new Length());
+addBuiltinFunction(new List());
 // addBuiltinFunction(new ListStar());
 // addBuiltinFunction(new ListRef());
-// addBuiltinFunction(new ListHuh());
+addBuiltinFunction(new ListHuh());
 // addBuiltinFunction(new MakeList());
 // addBuiltinFunction(new Member());
 // addBuiltinFunction(new MemberHuh());
@@ -1448,9 +1752,9 @@ addBuiltinFunction(new First());
 addBuiltinFunction(new Rest());
 // addBuiltinFunction(new Reverse());
 addBuiltinFunction(new Second());
-// addBuiltinFunction(new Seventh());
-// addBuiltinFunction(new Sixth());
-// addBuiltinFunction(new Third());
+addBuiltinFunction(new Seventh());
+addBuiltinFunction(new Sixth());
+addBuiltinFunction(new Third());
 /* Character Functions */
 // addBuiltinFunction(new CharToInteger());
 // addBuiltinFunction(new CharAlphanumicHuh());

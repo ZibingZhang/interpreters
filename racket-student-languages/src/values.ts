@@ -170,6 +170,13 @@ export abstract class RacketNumber implements RacketValue {
   div(other: RacketNumber): RacketNumber {
     return this.mul(other.inverted());
   }
+  
+  /**
+   * Return an inexact version of this number.
+   */
+  inexact(): RacketInexactFloat | RacketInexactFraction | RacketComplexNumber {
+    throw new Error('Method not implemented.');
+  }
 }
 
 /**
@@ -240,14 +247,18 @@ export abstract class RacketRealNumber extends RacketNumber {
   /**
    * Returns a new Racket number that is the closest integer above this.
    */
-  ceiling(): RacketRealNumber {
+  ceiling(): RacketExactNumber | RacketInexactFraction {
     throw new Error('Method not implemented.');
   }
 
   /**
    * Returns a new Racket number that is the closest integer below this.
    */
-  floor(): RacketRealNumber {
+  floor(): RacketExactNumber | RacketInexactFraction {
+    throw new Error('Method not implemented.');
+  }
+
+  inexact(): RacketInexactFloat | RacketInexactFraction {
     throw new Error('Method not implemented.');
   }
 }
@@ -370,6 +381,10 @@ export class RacketExactNumber extends RacketRealNumber {
 
   floor(): RacketExactNumber {
     return new RacketExactNumber(this.numerator / this.denominator, 1n);
+  }
+
+  inexact(): RacketInexactFraction {
+    return new RacketInexactFraction(this.numerator, this.denominator);
   }
 }
 
@@ -500,6 +515,10 @@ export class RacketInexactFraction extends RacketInexactNumber {
   floor(): RacketInexactFraction {
     return new RacketInexactFraction(this.numerator / this.denominator, 1n);
   }
+
+  inexact(): RacketInexactFraction {
+    return new RacketInexactFraction(this.numerator, this.denominator);
+  }
 }
 
 /**
@@ -608,12 +627,16 @@ export class RacketInexactFloat extends RacketInexactNumber {
     } else throw new UnreachableCode();
   }
 
-  ceiling(): RacketInexactFloat {
-    return new RacketInexactFloat(Math.ceil(this.value));
+  ceiling(): RacketInexactFraction {
+    return new RacketInexactFraction(BigInt(Math.ceil(this.value)), 1n);
   }
 
-  floor(): RacketInexactFloat {
-    return new RacketInexactFloat(Math.floor(this.value));
+  floor(): RacketInexactFraction {
+    return new RacketInexactFraction(BigInt(Math.floor(this.value)), 1n);
+  }
+
+  inexact(): RacketInexactFloat {
+    return new RacketInexactFloat(this.value);
   }
 }
 
@@ -688,6 +711,10 @@ export class RacketComplexNumber extends RacketNumber {
       if (!isReal(real)) throw new UnreachableCode();
       else return new RacketComplexNumber(real, this.imaginary);
     }
+  }
+
+  inexact(): RacketComplexNumber {
+    return new RacketComplexNumber(this.real.inexact(), this.imaginary.inexact());
   }
 }
 

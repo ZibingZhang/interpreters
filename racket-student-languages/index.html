@@ -59,12 +59,6 @@ Note:
 (check-expect (= +NaN.0 +NaN.0) false)
 (check-expect (= +inf.0 +inf.f (* -1 -inf.0) (* -1 -inf.f)) true)
 (check-expect (= 1/5 +1/5 0.2 (* -1 -1/5)) true)
-(check-expect (< 1 2 3) true)
-(check-expect (< 1 2 2) false)
-(check-expect (<= 1 2 2) true)
-(check-expect (> 3 2 1) true)
-(check-expect (> 2 2 1) false)
-(check-expect (>= 2 2 1) true)
 
 ;; Booleans
 (check-expect true true)
@@ -78,6 +72,10 @@ Note:
 ;; Strings
 (check-expect "hello" "hello")
 (check-expect (string=? "Hello" "hello") false)
+
+;; Lists
+(check-expect '() '())
+(check-expect (cons 1 (cons 2 '())) (cons 1 (cons 2 '())))
 
 ;; Variables
 (define VAR-1 1)
@@ -95,6 +93,42 @@ Note:
 (check-expect (coord-y COORD-1) 2)
 (check-expect (coord? COORD-1) true)
 (check-expect (coord? 1) false)
+
+;; ========== Functions ==========
+;; Numbers
+(check-expect (< 1 2 3) true)
+(check-expect (< 1 2 2) false)
+(check-expect (<= 1 2 2) true)
+(check-expect (> 3 2 1) true)
+(check-expect (> 2 2 1) false)
+(check-expect (>= 2 2 1) true)
+
+(check-expect (modulo 0 4) 0)
+(check-expect (modulo 0 -4) 0)
+(check-expect (modulo 5 4) 1)
+(check-expect (modulo -5 4) 3)
+(check-expect (modulo 5 -4) -3)
+(check-expect (modulo -5 -4) -1)
+
+;; Lists
+(check-expect (list) '())
+(check-expect (list 1 2 3) (cons 1 (cons 2 (cons 3 '()))))
+
+(check-expect (first (list 1 2 3)) 1)
+(check-expect (rest (list 1 2 3)) (list 2 3))
+
+(check-expect (second  (list 1 2 3 4 5 6 7 8)) 2)
+(check-expect (third   (list 1 2 3 4 5 6 7 8)) 3)
+(check-expect (fourth  (list 1 2 3 4 5 6 7 8)) 4)
+(check-expect (fifth   (list 1 2 3 4 5 6 7 8)) 5)
+(check-expect (sixth   (list 1 2 3 4 5 6 7 8)) 6)
+(check-expect (seventh (list 1 2 3 4 5 6 7 8)) 7)
+(check-expect (eighth  (list 1 2 3 4 5 6 7 8)) 8)
+
+(check-expect (append (list 1 2 3) '() (list 4 5)) (list 1 2 3 4 5))
+
+(check-expect (length '()) 0)
+(check-expect (length (list 1 2 3)) 3)
 
 ;; ========== Syntax ==========
 
