@@ -971,6 +971,23 @@ class StringSymEqHuh extends RacketBuiltInFunction {
  * Miscellaneous Functions
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
+/* Signature:
+ *  (identity x) → any
+ *    x : any/c
+ * Purpose Statement:
+ *    Returns `x`.
+ */
+class Identity extends RacketBuiltInFunction {
+  constructor() {
+    super('identity', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    return args[0];
+  }
+}
+
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Assertions
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
@@ -1415,7 +1432,7 @@ addBuiltinFunction(new StringSymEqHuh());
 // addBuiltinFunction(new EqvHuh());
 // addBuiltinFunction(new Error());
 // addBuiltinFunction(new Exit());
-// addBuiltinFunction(new Identity());
+addBuiltinFunction(new Identity());
 // addBuiltinFunction(new StructHuh());
 /* Structures */
 addBuiltInStructure(new RacketStructure('posn', ['x', 'y']));
