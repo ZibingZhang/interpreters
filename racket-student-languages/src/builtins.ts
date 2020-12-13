@@ -1,4 +1,7 @@
-import { BuiltinFunctionError, UnreachableCode } from './errors.js';
+import { 
+  BuiltinFunctionError,
+  UnreachableCode
+} from './errors.js';
 import {
   isBoolean,
   isCallable,
@@ -8,6 +11,7 @@ import {
   isExact,
   isInexact,
   isInexactFloat,
+  isInstance,
   isInteger,
   isList,
   isNatural,
@@ -395,6 +399,22 @@ class ComplexHuh extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketBoolean {
     super.call(args);
     return toRacketBoolean(isComplex(args[0]));
+  }
+}
+
+/* Signature:
+ * (current-seconds) → integer
+ * Purpose Statement:
+ *    Determines the current time in seconds elapsed (since a platform-specific starting date).
+ */
+class CurrentSeconds extends RacketBuiltInFunction {
+  constructor() {
+    super('current-seconds', 0, 0);
+  }
+
+  call(args: RacketValue[]): RacketExactNumber {
+    super.call(args);
+    return new RacketExactNumber(BigInt(Date.now()) / 1000n, 1n);
   }
 }
 
@@ -1190,6 +1210,23 @@ class ListHuh extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ *  (null? x) → boolean?
+ *    x : any/c
+ * Purpose Statement:
+ *    Determines whether some value is the empty list.
+ */
+class NullHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('null?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isEmpty(args[0]));
+  }
+}
+
+/* Signature:
  *  (rest x) → any/c
  *    x : cons?
  * Purpose Statement:
@@ -1204,6 +1241,29 @@ class Rest extends RacketBuiltInFunction {
     super.call(args);
     let list = assertListOfLengthAtLeastN(this.name, 1, args[0])
     return list.rest;
+  }
+}
+
+/* Signature:
+ *  (reverse l) → list
+ *    l : list?
+ * Purpose Statement:
+ *    Creates a reversed version of a list.
+ */
+class Reverse extends RacketBuiltInFunction {
+  constructor() {
+    super('reverse', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    let list = assertList(this.name, args[0]);
+    let result = RACKET_EMPTY_LIST;
+    while (isConstructed(list)) {
+      result = new RacketConstructedList(list.first, result);
+      list = list.rest;
+    }
+    return result;
   }
 }
 
@@ -1302,6 +1362,31 @@ class Third extends RacketBuiltInFunction {
 // TODO: functions which expect naturals should not accept inexact non-negative integers
 
 /* Signature:
+ *  (string-append s t z ...) → string
+ *    s : string
+ *    t : string
+ *    z : string
+ * Purpose Statement:
+ *    Concatenates the characters of several strings.
+ */
+class StringAppend extends RacketBuiltInFunction {
+  constructor() {
+    super('string-append', 2, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketString {
+    super.call(args);
+    let strings = assertListOfStrings(this.name, args);
+    let result = '';
+    for (let string of strings) {
+      result += string.value;
+    }
+    return new RacketString(result);
+  }
+}
+
+
+/* Signature:
  *  (string-ith s i) → 1string?
  *    s : string
  *    i : natural-number
@@ -1321,6 +1406,24 @@ class StringIth extends RacketBuiltInFunction {
       this.error(`string-ith: expected an exact integer in [0, ${string.length}) (i.e., less than the length of the given string) for the second argument, but received ${index.toString()}`)
     }
     return new RacketString(string[Number(index.numerator)]);
+  }
+}
+
+/* Signature:
+ *  (string-length s) → nat
+ *    s : string
+ * Purpose Statement:
+ *    Determines the length of the string.
+ */
+class StringLength extends RacketBuiltInFunction {
+  constructor() {
+    super('string-length', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketExactNumber {
+    super.call(args);
+    let strings = assertListOfStrings(this.name, args);
+    return new RacketExactNumber(BigInt(strings[0].value.length), 1n);
   }
 }
 
@@ -1430,6 +1533,23 @@ class Identity extends RacketBuiltInFunction {
   }
 }
 
+/* Signature:
+ *  (struct? x) → boolean
+ *    x : any/c
+ * Purpose Statement:
+ *    Determines whether some value is a structure.
+ */
+class StructHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('struct?', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    return toRacketBoolean(isInstance(args[0]));
+  }
+}
+
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Assertions
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
@@ -1495,7 +1615,9 @@ function assertExactlyNArguments(name: string, expected: number, received: numbe
     return;
   }
   let errMsg = name + ': ';
-  if (expected < received) {
+  if (expected === 0) {
+    errMsg += `expects no argument, but found ${received}`;
+  } else if (expected < received) {
     errMsg += `expects only ${expected} argument${expected === 1 ? '' : 's'}, but found ${received}`;
   } else {
     errMsg += `expects ${expected} argument${expected === 1 ? '' : 's'}, `;
@@ -1806,7 +1928,7 @@ addBuiltinFunction(new ComplexHuh());
 // addBuiltinFunction(new Conjugate());
 // addBuiltinFunction(new Cos());
 // addBuiltinFunction(new Cosh());
-// addBuiltinFunction(new CurrentSeconds());
+addBuiltinFunction(new CurrentSeconds());
 // addBuiltinFunction(new Denominator());
 addBuiltinFunction(new EvenHuh());
 addBuiltinFunction(new ExactToInexact());
@@ -1897,12 +2019,12 @@ addBuiltinFunction(new ListHuh());
 // addBuiltinFunction(new Memq());
 // addBuiltinFunction(new MemqHuh());
 // addBuiltinFunction(new Memv());
-// addBuiltinFunction(new NullHuh());
+addBuiltinFunction(new NullHuh());
 // addBuiltinFunction(new Range());
 // addBuiltinFunction(new Remove());
 // addBuiltinFunction(new RemoveAll());
 addBuiltinFunction(new Rest());
-// addBuiltinFunction(new Reverse());
+addBuiltinFunction(new Reverse());
 addBuiltinFunction(new Second());
 addBuiltinFunction(new Seventh());
 addBuiltinFunction(new Sixth());
@@ -1941,7 +2063,7 @@ addBuiltinFunction(new Third());
 // addBuiltinFunction(new StringToNumber());
 // addBuiltinFunction(new StringToSymbol());
 // addBuiltinFunction(new StringAlphabeticHuh());
-// addBuiltinFunction(new StringAppend());
+addBuiltinFunction(new StringAppend());
 // addBuiltinFunction(new StringCiSymLeqHuh());
 // addBuiltinFunction(new StringCiSymLtHuh());
 // addBuiltinFunction(new StringCiSymEqHuh());
@@ -1952,7 +2074,7 @@ addBuiltinFunction(new Third());
 // addBuiltinFunction(new StringCopy());
 // addBuiltinFunction(new StringDowncase());
 addBuiltinFunction(new StringIth());
-// addBuiltinFunction(new StringLength());
+addBuiltinFunction(new StringLength());
 // addBuiltinFunction(new StringLowerCaseHuh());
 // addBuiltinFunction(new StringNumericHuh());
 // addBuiltinFunction(new StringRef());
@@ -1980,7 +2102,7 @@ addBuiltinFunction(new Substring());
 // addBuiltinFunction(new Error());
 // addBuiltinFunction(new Exit());
 addBuiltinFunction(new Identity());
-// addBuiltinFunction(new StructHuh());
+addBuiltinFunction(new StructHuh());
 /* Structures */
 addBuiltInStructure(new RacketStructure('posn', ['x', 'y']));
 /* Literals */
