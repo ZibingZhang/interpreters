@@ -258,11 +258,16 @@ export default class Resolver implements ir1.StmtVisitor {
     if (paramList.length === 0) {
       reporter.resolver.noFunctionParams();
     }
+    let names: string[] = [];
     this.symbolTable.define(identifier.name.lexeme, RacketValueType.FUNCTION, paramList.length);
     for (let param of paramList) {
       if (!(param instanceof ir1.Identifier)) {
-        reporter.resolver.badFunctionParamType(param);
+        // return statement for typechecker
+        return reporter.resolver.badFunctionParamType(param);
+      } else if (names.includes(param.name.lexeme)) {
+        reporter.resolver.functionDuplicateVariable(param.name.lexeme);
       }
+      names.push(param.name.lexeme);
     }
     if (exprs.length < 1) {
       return reporter.resolver.missingFunctionBody();
@@ -376,10 +381,15 @@ export default class Resolver implements ir1.StmtVisitor {
     if (params.length === 0) {
       reporter.resolver.noLambdaParams();
     }
+    let names: string[] = [];
     for (let param of params) {
       if (!(param instanceof ir1.Identifier)) {
-        reporter.resolver.badLambdaParamType(param);
+        // return statement for typechecker
+        return reporter.resolver.badLambdaParamType(param);
+      } else if (names.includes(param.name.lexeme)) {
+        reporter.resolver.lambdaDuplicateVariable(param.name.lexeme);
       }
+      names.push(param.name.lexeme);
     }
     if (exprs.length === 1) {
       reporter.resolver.missingLambdaBody();
