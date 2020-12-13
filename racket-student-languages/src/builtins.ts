@@ -1,8 +1,9 @@
-import { BuiltinFunctionError } from './errors.js';
+import { BuiltinFunctionError, UnreachableCode } from './errors.js';
 import {
   isBoolean,
   isCallable,
   isComplex,
+  isConstructed,
   isExact,
   isInexact,
   isInexactFloat,
@@ -936,6 +937,69 @@ class Cons extends RacketBuiltInFunction {
   }
 }
 
+/* Signature:
+ *  (first x) → any/c
+ *    x : cons?
+ * Purpose Statement:
+ *    Selects the first item of a non-empty list.
+ */
+class First extends RacketBuiltInFunction {
+  constructor() {
+    super('first', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 1, args[0])
+    if (!isConstructed(list)) {
+      throw new UnreachableCode();
+    }
+    return list.first;
+  }
+}
+
+/* Signature:
+ *  (rest x) → any/c
+ *    x : cons?
+ * Purpose Statement:
+ *    Selects the rest of a non-empty list.
+ */
+class Rest extends RacketBuiltInFunction {
+  constructor() {
+    super('rest', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 1, args[0])
+    if (!isConstructed(list)) {
+      throw new UnreachableCode();
+    }
+    return list.rest;
+  }
+}
+
+/* Signature:
+ *  (second x) → any/c
+ *    x : list?
+ * Purpose Statement:
+ *    Selects the second item of a non-empty list. 
+ */
+class Second extends RacketBuiltInFunction {
+  constructor() {
+    super('second', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = assertListOfLengthAtLeastN(this.name, 2, args[0])
+    if (!isConstructed(list)) {
+      throw new UnreachableCode();
+    }
+    return list.first;
+  }
+}
+
 /* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
  * Character Functions
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
@@ -998,11 +1062,11 @@ class Identity extends RacketBuiltInFunction {
  * @param minimum the minimum number of arguments expected
  * @param received the number of arguments received
  */
-function assertAtLeastNArguments(name: string, minimum: number, received: number):  void {
+function assertAtLeastNArguments(name: string, minimum: number, received: number): void {
   if (minimum <= received) {
     return;
   }
-  let errMsg = `${name}: `;
+  let errMsg = name + ': ';
   errMsg += `expects at least ${minimum} argument${minimum === 1 ? '' : 's'}, `;
   if (received === 0) {
     errMsg += 'but received none';
@@ -1010,6 +1074,33 @@ function assertAtLeastNArguments(name: string, minimum: number, received: number
     errMsg += `but received only ${received}`;
   }
   error(errMsg);
+}
+
+/**
+ * Assert that the value is a list with at least `n` elements.
+ * @param name the name of the function
+ * @param minimum the minimum number of elements expected
+ * @param received the value received
+ */
+function assertListOfLengthAtLeastN(name: string, minimum: number, received: RacketValue): RacketList {
+  let list = received;
+  for (let count = 0; count < minimum; count++) {
+    if (!isConstructed(list)) {
+      let errMsg = name + ': ';
+      if (minimum === 1) {
+        errMsg += 'expects a non-empty list; ';
+      } else {
+        errMsg += `expects a list with ${minimum} or more items; `;
+      }
+      errMsg += 'given ' + received.toString();
+      error(errMsg)
+    }
+    if (count + 1 == minimum) {
+      break;
+    }
+    list = list.rest;
+  }
+  return list;
 }
 
 /**
@@ -1334,10 +1425,10 @@ addBuiltinFunction(new SymbolHuh());
 // addBuiltinFunction(new Cddr());
 // addBuiltinFunction(new Cdr());
 addBuiltinFunction(new Cons());
-// addBuiltinFunction(new Eigth());
+// addBuiltinFunction(new Eighth());
 // addBuiltinFunction(new EmptyHuh());
 // addBuiltinFunction(new Fifth());
-// addBuiltinFunction(new First());
+addBuiltinFunction(new First());
 // addBuiltinFunction(new Fourth());
 // addBuiltinFunction(new Length());
 // addBuiltinFunction(new List());
@@ -1354,9 +1445,9 @@ addBuiltinFunction(new Cons());
 // addBuiltinFunction(new Range());
 // addBuiltinFunction(new Remove());
 // addBuiltinFunction(new RemoveAll());
-// addBuiltinFunction(new Rest());
+addBuiltinFunction(new Rest());
 // addBuiltinFunction(new Reverse());
-// addBuiltinFunction(new Second());
+addBuiltinFunction(new Second());
 // addBuiltinFunction(new Seventh());
 // addBuiltinFunction(new Sixth());
 // addBuiltinFunction(new Third());
