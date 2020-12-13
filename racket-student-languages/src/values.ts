@@ -110,6 +110,10 @@ export const RACKET_EMPTY_LIST = new RacketEmptyList();
   * A Racket number.
   */
 export abstract class RacketNumber implements RacketValue {
+  /**
+   * Is this number equal to that one?
+   * @param other the number to compare to this one
+   */
   equals(other: RacketValue): boolean {
     throw new Error('Method not implemented.');
   }
@@ -187,11 +191,49 @@ export abstract class RacketRealNumber extends RacketNumber {
     throw new Error('Method not implemented.');
   }
 
+  /**
+   * Is this number negative?
+   */
   isNegative(): boolean {
     throw new Error('Method not implemented.');
   }
 
+  /**
+   * Is this number positive?
+   */
   isPositive(): boolean {
+    throw new Error('Method not implemented.');
+  }
+
+  /**
+   * Is this number less than that one?
+   * @param other the number to compare to this one
+   */
+  lt(other: RacketRealNumber): boolean {
+    throw new Error('Method not implemented.');
+  }
+
+  /**
+   * Is this number less than or equal to that one?
+   * @param other the number to compare to this one
+   */
+  leq(other: RacketRealNumber): boolean {
+    throw new Error('Method not implemented.');
+  }
+
+  /**
+   * Is this number greater than that one?
+   * @param other the number to compare to this one
+   */
+  gt(other: RacketRealNumber): boolean {
+    throw new Error('Method not implemented.');
+  }
+
+  /**
+   * Is this number greater than or equal to that one?
+   * @param other the number to compare to this one
+   */
+  geq(other: RacketRealNumber): boolean {
     throw new Error('Method not implemented.');
   }
 }
@@ -269,6 +311,38 @@ export class RacketExactNumber extends RacketRealNumber {
 
   isPositive(): boolean {
     return this.numerator / this.denominator > 0;
+  }
+
+  lt(other: RacketRealNumber): boolean {
+    if (!isRational(other)) {
+      return other.geq(this);
+    } else {
+      return this.numerator * other.denominator < other.numerator * this.denominator;
+    }
+  }
+
+  leq(other: RacketRealNumber): boolean {
+    if (!isRational(other)) {
+      return other.gt(this);
+    } else {
+      return this.numerator * other.denominator <= other.numerator * this.denominator;
+    }
+  }
+
+  gt(other: RacketRealNumber): boolean {
+    if (!isRational(other)) {
+      return other.leq(this);
+    } else {
+      return this.numerator * other.denominator > other.numerator * this.denominator;
+    }
+  }
+
+  geq(other: RacketRealNumber): boolean {
+    if (!isRational(other)) {
+      return other.geq(this);
+    } else {
+      return this.numerator * other.denominator >= other.numerator * this.denominator;
+    }
   }
 }
 
@@ -353,6 +427,39 @@ export class RacketInexactFraction extends RacketInexactNumber {
   isPositive(): boolean {
     return this.numerator / this.denominator > 0;
   }
+
+  
+  lt(other: RacketRealNumber): boolean {
+    if (!isRational(other)) {
+      return other.geq(this);
+    } else {
+      return this.numerator * other.denominator < other.numerator * this.denominator;
+    }
+  }
+
+  leq(other: RacketRealNumber): boolean {
+    if (!isRational(other)) {
+      return other.gt(this);
+    } else {
+      return this.numerator * other.denominator <= other.numerator * this.denominator;
+    }
+  }
+
+  gt(other: RacketRealNumber): boolean {
+    if (!isRational(other)) {
+      return other.leq(this);
+    } else {
+      return this.numerator * other.denominator > other.numerator * this.denominator;
+    }
+  }
+
+  geq(other: RacketRealNumber): boolean {
+    if (!isRational(other)) {
+      return other.geq(this);
+    } else {
+      return this.numerator * other.denominator >= other.numerator * this.denominator;
+    }
+  }
 }
 
 /**
@@ -427,6 +534,38 @@ export class RacketInexactFloat extends RacketInexactNumber {
 
   isPositive(): boolean {
     return this.value > 0;
+  }
+
+  lt(other: RacketRealNumber): boolean {
+    if (isRational(other)) {
+      return fractionToFloat(other.numerator, other.denominator) < this.value; 
+    } else if (other instanceof RacketInexactFloat) {
+      return other.value < this.value;
+    } else throw new UnreachableCode();
+  }
+
+  leq(other: RacketRealNumber): boolean {
+    if (isRational(other)) {
+      return fractionToFloat(other.numerator, other.denominator) <= this.value; 
+    } else if (other instanceof RacketInexactFloat) {
+      return other.value <= this.value;
+    } else throw new UnreachableCode();
+  }
+
+  gt(other: RacketRealNumber): boolean {
+    if (isRational(other)) {
+      return fractionToFloat(other.numerator, other.denominator) > this.value; 
+    } else if (other instanceof RacketInexactFloat) {
+      return other.value > this.value;
+    } else throw new UnreachableCode();
+  }
+
+  geq(other: RacketRealNumber): boolean {
+    if (isRational(other)) {
+      return fractionToFloat(other.numerator, other.denominator) >= this.value; 
+    } else if (other instanceof RacketInexactFloat) {
+      return other.value >= this.value;
+    } else throw new UnreachableCode();
   }
 }
 

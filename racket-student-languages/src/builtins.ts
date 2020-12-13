@@ -193,6 +193,56 @@ class SymDivide extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ * (< x y z ...) → boolean?
+ *    x : real
+ *    y : real
+ *    z : real
+ * Purpose Statement:
+ *    Compares (real) numbers for less-than.
+ */
+class SymLt extends RacketBuiltInFunction {
+  constructor() {
+    super('<', 2, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    for (let idx = 0; idx < reals.length - 1; idx++) {
+      if (!reals[idx].lt(reals[idx+1])) {
+        return RACKET_FALSE;
+      }
+    }
+    return RACKET_TRUE;
+  }
+}
+
+/* Signature:
+ * (<= x y z ...) → boolean?
+ *    x : real
+ *    y : real
+ *    z : real
+ * Purpose Statement:
+ *    Compares (real) numbers for less-than or equality.
+ */
+class SymLeq extends RacketBuiltInFunction {
+  constructor() {
+    super('<=', 2, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    for (let idx = 0; idx < reals.length - 1; idx++) {
+      if (!reals[idx].leq(reals[idx+1])) {
+        return RACKET_FALSE;
+      }
+    }
+    return RACKET_TRUE;
+  }
+}
+
+/* Signature:
  * (= x y z ...) → boolean?
  *    x : number
  *    y : number
@@ -215,6 +265,56 @@ class SymEq extends RacketBuiltInFunction {
         }
       }
     return toRacketBoolean(true);
+  }
+}
+
+/* Signature:
+ * (> x y z ...) → boolean?
+ *    x : real
+ *    y : real
+ *    z : real
+ * Purpose Statement:
+ *    Compares (real) numbers for greater-than.
+ */
+class SymGt extends RacketBuiltInFunction {
+  constructor() {
+    super('>', 2, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    for (let idx = 0; idx < reals.length - 1; idx++) {
+      if (!reals[idx].gt(reals[idx+1])) {
+        return RACKET_FALSE;
+      }
+    }
+    return RACKET_TRUE;
+  }
+}
+
+/* Signature:
+ * (>= x y z ...) → boolean?
+ *    x : real
+ *    y : real
+ *    z : real
+ * Purpose Statement:
+ *    Compares (real) numbers for greater-than or equality.
+ */
+class SymGeq extends RacketBuiltInFunction {
+  constructor() {
+    super('>=', 2, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let reals = assertListOfReals(this.name, args);
+    for (let idx = 0; idx < reals.length - 1; idx++) {
+      if (!reals[idx].geq(reals[idx+1])) {
+        return RACKET_FALSE;
+      }
+    }
+    return RACKET_TRUE;
   }
 }
 
@@ -844,11 +944,11 @@ addBuiltinFunction(new SymStar());
 addBuiltinFunction(new SymPlus());
 addBuiltinFunction(new SymMinus());
 addBuiltinFunction(new SymDivide());
-// addBuiltinFunction(new SymLt());
-// addBuiltinFunction(new SymLeq());
+addBuiltinFunction(new SymLt());
+addBuiltinFunction(new SymLeq());
 addBuiltinFunction(new SymEq());
-// addBuiltinFunction(new SymGt());
-// addBuiltinFunction(new SymGeq());
+addBuiltinFunction(new SymGt());
+addBuiltinFunction(new SymGeq());
 addBuiltinFunction(new Abs());
 // addBuiltinFunction(new Acos());
 // addBuiltinFunction(new Add1());

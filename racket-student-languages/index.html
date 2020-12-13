@@ -59,6 +59,12 @@ Note:
 (check-expect (= +NaN.0 +NaN.0) false)
 (check-expect (= +inf.0 +inf.f (* -1 -inf.0) (* -1 -inf.f)) true)
 (check-expect (= 1/5 +1/5 0.2 (* -1 -1/5)) true)
+(check-expect (< 1 2 3) true)
+(check-expect (< 1 2 2) false)
+(check-expect (<= 1 2 2) true)
+(check-expect (> 3 2 1) true)
+(check-expect (> 2 2 1) false)
+(check-expect (>= 2 2 1) true)
 
 ;; Booleans
 (check-expect true true)
