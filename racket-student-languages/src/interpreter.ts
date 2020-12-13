@@ -76,7 +76,7 @@ export default class Interpreter implements ir2.StmtVisitor {
     if (name === undefined) {
       let args = expr.arguments.map(this.evaluate.bind(this));
       return callee.call(args);
-    } else if (this.stack.size() > 0 && name === this.stack.peek()) {
+    } else if (this.stack.size() > 0 && name === this.stack.peek() && !BUILT_INS.has(name)) {
       let args = expr.arguments.map(this.evaluate.bind(this));
       this.stack.set(args);
       throw new Interpreter.TailEndRecursion();
