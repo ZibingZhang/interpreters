@@ -4,7 +4,6 @@ import {
 } from './errors.js';
 import {
   isBoolean,
-  isCallable,
   isComplex,
   isConstructed,
   isEmpty,
@@ -64,7 +63,7 @@ import {
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 export abstract class RacketBuiltInFunction implements RacketCallable {
-  readonly name: string;
+  name: string;
   readonly min: number;
   readonly max: number;
 
@@ -79,6 +78,8 @@ export abstract class RacketBuiltInFunction implements RacketCallable {
   }
   
   call(args: RacketValue[]): RacketValue {
+    // assertNoFunctions(args);
+
     if (this.max === Infinity && this.min > 0) {
       assertAtLeastNArguments(this.name, this.min, args.length);
     } else if (this.min === this.max) {
@@ -1015,9 +1016,7 @@ class Append extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketList {
     super.call(args);
-    if (!isList(args[args.length - 1])) {
-      this.error(`append: last argument must be a list, but received ${args[args.length-1].toString()}`);
-    }
+    assertLastList(this.name, args);
     let elements: RacketValue[] = [];
     for (let arg of args) {
       if (!isList(arg)) {
@@ -1037,6 +1036,20 @@ class Append extends RacketBuiltInFunction {
     return list;
   }
 }
+
+/* Signature:
+ *  (car x) → any/c
+ *    x : cons?
+ * Purpose Statement:
+ *    Selects the first item of a non-empty list.
+ */
+
+/* Signature:
+ *  (cdr x) → any/c
+ *    x : cons?
+ * Purpose Statement:
+ *    Selects the rest of a non-empty list.
+ */
 
 /* Signature:
  *  (cons x y) → list?
@@ -1193,6 +1206,28 @@ class List extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ *  (list x ... l) → list?
+ *    x : any/c
+ *    l : list?
+ * Purpose Statement:
+ *    Constructs a list by adding multiple items to a list.
+ */
+class ListStar extends RacketBuiltInFunction {
+  constructor() {
+    super('list*', 1, Infinity);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    let list = assertLastList(this.name, args);
+    for (let idx = args.length - 2; idx >= 0; idx--) {
+      list = new RacketConstructedList(args[idx], list);
+    }
+    return list;
+  }
+}
+
+/* Signature:
  *  (list? x) → boolean?
  *    x : any
  * Purpose Statement:
@@ -1210,19 +1245,112 @@ class ListHuh extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ *  (member x l) → boolean?
+ *    x : any/c
+ *    l : list?
+ * Purpose Statement:
+ *    Determines whether some value is on the list (comparing values with
+ *    equal?).
+ */
+class Member extends RacketBuiltInFunction {
+  constructor() {
+    super('member', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let list = assertSecondList(this.name, args);
+    let value = args[0];
+    while (isConstructed(list)) {
+      if (value.equals(list.first)) {
+        return RACKET_TRUE;
+      }
+      list = list.rest;
+    }
+    return RACKET_FALSE;
+  }
+}
+
+/* Signature:
+ *  (member? x l) → boolean?
+ *    x : any/c
+ *    l : list?
+ * Purpose Statement:
+ *    Determines whether some value is on the list (comparing values with
+ *    equal?).
+ */
+
+/* Signature:
  *  (null? x) → boolean?
  *    x : any/c
  * Purpose Statement:
  *    Determines whether some value is the empty list.
  */
-class NullHuh extends RacketBuiltInFunction {
+
+/* Signature:
+ *  (remove x l) → boolean?
+ *    x : any/c
+ *    l : list?
+ * Purpose Statement:
+ *    Constructs a list like the given one, with the first occurrence of the
+ *    given item removed (comparing values with equal?).
+ */
+class Remove extends RacketBuiltInFunction {
   constructor() {
-    super('null?', 1, 1);
+    super('remove', 2, 2);
   }
 
-  call(args: RacketValue[]): RacketBoolean {
+  call(args: RacketValue[]): RacketList {
     super.call(args);
-    return toRacketBoolean(isEmpty(args[0]));
+    let list = assertSecondList(this.name, args);
+    let value = args[0];
+    let elements: RacketValue[] = [];
+    let found = false;
+    while (isConstructed(list)) {
+      if (found || !value.equals(list.first)) {
+        elements.push(list.first);
+      } else {
+        found = true;
+      }
+      list = list.rest;
+    }
+    let result = RACKET_EMPTY_LIST;
+    for (let idx = elements.length - 1; idx >= 0; idx--) {
+      result = new RacketConstructedList(elements[idx], result);
+    }
+    return result;
+  }
+}
+
+/* Signature:
+ *  (remove-all x l) → boolean?
+ *    x : any/c
+ *    l : list?
+ * Purpose Statement:
+ *    Constructs a list like the given one, with all occurrences of the given
+ *    item removed (comparing values with equal?).
+ */
+class RemoveAll extends RacketBuiltInFunction {
+  constructor() {
+    super('remove-all', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    let list = assertSecondList(this.name, args);
+    let value = args[0];
+    let elements: RacketValue[] = [];
+    while (isConstructed(list)) {
+      if (!value.equals(list.first)) {
+        elements.push(list.first);
+      }
+      list = list.rest;
+    }
+    let result = RACKET_EMPTY_LIST;
+    for (let idx = elements.length - 1; idx >= 0; idx--) {
+      result = new RacketConstructedList(elements[idx], result);
+    }
+    return result;
   }
 }
 
@@ -1517,6 +1645,25 @@ class StringHuh extends RacketBuiltInFunction {
  * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 /* Signature:
+ *  (equal? x y) → boolean?
+ *    x : any/c
+ *    y : any/c
+ * Purpose Statement:
+ *    Determines whether two values are structurally equal, where basic values
+ *    are compared with the eqv? predicate.
+ */
+class EqualHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('equal?', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    return toRacketBoolean(args[0].equals(args[1]));
+  }
+}
+
+/* Signature:
  *  (identity x) → any
  *    x : any/c
  * Purpose Statement:
@@ -1635,7 +1782,7 @@ function assertExactlyNArguments(name: string, expected: number, received: numbe
  * @param name the name of the function
  * @param min the minimum number of arguments expected
  * @param max the maximum number of arguments expected
- * @param args the arguments received
+ * @param args the received arguments
  */
 function assertRangeOfArguments(name: string, min: number, max: number, args: RacketValue[]): void {
   if (min <= args.length && args.length <= max) {
@@ -1657,7 +1804,7 @@ function assertRangeOfArguments(name: string, min: number, max: number, args: Ra
 /**
  * Assert that the argument is a list.
  * @param name the name of the function
- * @param args the received argument
+ * @param arg the received argument
  */
 function assertList(name: string, arg: RacketValue): RacketList {
   if (!isList(arg)) {
@@ -1668,9 +1815,23 @@ function assertList(name: string, arg: RacketValue): RacketList {
 }
 
 /**
+ * Assert that the second argument is a list.
+ * @param name the name of the function
+ * @param args the received arguments
+ */
+function assertSecondList(name: string, args: RacketValue[]): RacketList {
+  let list = args[1];
+  if (!isList(list)) {
+    // @ts-ignore
+    error(`${name}: second argument must be a list, but received ${args[0].toString()} and ${list.toString()}`);
+  }
+  return list;
+}
+
+/**
  * Assert that the nth argument is a natural number.
  * @param name the name of the function
- * @param args the received argument
+ * @param arg the received argument
  * @param nth the position of the argument
  */
 function assertNthNatural(name: string, arg: RacketValue, nth: number): RacketExactNumber | RacketInexactFraction {
@@ -1683,7 +1844,7 @@ function assertNthNatural(name: string, arg: RacketValue, nth: number): RacketEx
 /**
  * Assert that the nth argument is a string.
  * @param name the name of the function
- * @param args the received argument
+ * @param arg the received argument
  * @param nth the position of the argument
  */
 function assertNthString(name: string, arg: RacketValue, nth: number): RacketString {
@@ -1694,6 +1855,20 @@ function assertNthString(name: string, arg: RacketValue, nth: number): RacketStr
 }
 
 /**
+ * Assert that the last argument is a list.
+ * @param name the name of the function
+ * @param args the received arguments
+ */
+function assertLastList(name: string, args: RacketValue[]): RacketList {
+  let list = args[args.length - 1];
+  if (!isList(list)) {
+    // @ts-ignore
+    error(`${name}: last argument must be a list, but received ${list.toString()}`);
+  }
+  return list;
+}
+
+/**
  * Assert that the arguments are all integers.
  * @param name the name of the function
  * @param args the received arguments
@@ -1701,9 +1876,7 @@ function assertNthString(name: string, arg: RacketValue, nth: number): RacketStr
 function assertListOfIntegers(name: string, args: RacketValue[]): (RacketExactNumber | RacketInexactFraction)[] {
   let integers: (RacketExactNumber | RacketInexactFraction)[] = [];
   args.forEach((arg, idx) => {
-    if (isCallable(arg)) {
-      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
-    } else if (!isInteger(arg)) {
+    if (!isInteger(arg)) {
       if (args.length === 1) {
         error(`${name}: expects integer, given ${arg.toString()}`);
       } else {
@@ -1723,9 +1896,7 @@ function assertListOfIntegers(name: string, args: RacketValue[]): (RacketExactNu
 function assertListOfNumbers(name: string, args: RacketValue[]): RacketNumber[] {
   let numbers: RacketNumber[] = [];
   args.forEach((arg, idx) => {
-    if (isCallable(arg)) {
-      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
-    } else if (!isNumber(arg)) {
+    if (!isNumber(arg)) {
       if (args.length === 1) {
         error(`${name}: expects a number, given ${arg.toString()}`);
       } else {
@@ -1745,9 +1916,7 @@ function assertListOfNumbers(name: string, args: RacketValue[]): RacketNumber[] 
 function assertListOfReals(name: string, args: RacketValue[]): RacketRealNumber[] {
   let numbers: RacketRealNumber[] = [];
   args.forEach((arg, idx) => {
-    if (isCallable(arg)) {
-      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
-    } else if (!isReal(arg)) {
+    if (!isReal(arg)) {
       if (args.length === 1) {
         error(`${name}: expects a real, given ${arg.toString()}`);
       } else {
@@ -1767,9 +1936,7 @@ function assertListOfReals(name: string, args: RacketValue[]): RacketRealNumber[
 function assertListOfBooleans(name: string, args: RacketValue[]): RacketBoolean[] {
   let booleans: RacketBoolean[] = [];
   args.forEach((arg, idx) => {
-    if (isCallable(arg)) {
-      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
-    } else if (!isBoolean(arg)) {
+    if (!isBoolean(arg)) {
       if (args.length === 1) {
         error(`${name}: expected either #true or #false; given ${arg.toString()}`);
       } else {
@@ -1789,9 +1956,7 @@ function assertListOfBooleans(name: string, args: RacketValue[]): RacketBoolean[
 function assertListOfSymbols(name: string, args: RacketValue[]): RacketSymbol[] {
   let symbols: RacketSymbol[] = [];
   args.forEach((arg, idx) => {
-    if (isCallable(arg)) {
-      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
-    } else if (!isSymbol(arg)) {
+    if (!isSymbol(arg)) {
       if (args.length === 1) {
         error(`${name}: expects a symbol; given ${arg.toString()}`);
       } else {
@@ -1811,9 +1976,7 @@ function assertListOfSymbols(name: string, args: RacketValue[]): RacketSymbol[] 
 function assertListOfStrings(name: string, args: RacketValue[]): RacketString[] {
   let strings: RacketString[] = [];
   args.forEach((arg, idx) => {
-    if (isCallable(arg)) {
-      error(`${name}: expected a function call, but there is no open parenthesis before this function`);
-    } else if (!isString(arg)) {
+    if (!isString(arg)) {
       if (args.length === 1) {
         error(`${name}: expects a string; given ${arg.toString()}`);
       } else {
@@ -1890,6 +2053,11 @@ function toRacketBoolean(bool: boolean): RacketBoolean {
 
 function addBuiltinFunction(fun: RacketBuiltInFunction): void {
   BUILT_INS.set(fun.name, fun);
+}
+
+function addBuiltInFunctionAlias(fun: RacketBuiltInFunction, alias: string): void {
+  BUILT_INS.set(alias, fun);
+  fun.name = alias;
 }
 
 function addBuiltInStructure(structure: RacketStructure): void {
@@ -1994,14 +2162,14 @@ addBuiltinFunction(new Append());
 // addBuiltinFunction(new Cadddr());
 // addBuiltinFunction(new Caddr());
 // addBuiltinFunction(new Cadr());
-// addBuiltinFunction(new Car());
+addBuiltInFunctionAlias(new First(), 'car');
 // addBuiltinFunction(new Cdaar());
 // addBuiltinFunction(new Cdadr());
 // addBuiltinFunction(new Cdar());
 // addBuiltinFunction(new Cddar());
 // addBuiltinFunction(new Cdddr());
 // addBuiltinFunction(new Cddr());
-// addBuiltinFunction(new Cdr());
+addBuiltInFunctionAlias(new Rest(), 'cdr');
 addBuiltinFunction(new Cons());
 addBuiltinFunction(new Eighth());
 addBuiltinFunction(new EmptyHuh());
@@ -2010,19 +2178,19 @@ addBuiltinFunction(new First());
 addBuiltinFunction(new Fourth());
 addBuiltinFunction(new Length());
 addBuiltinFunction(new List());
-// addBuiltinFunction(new ListStar());
+addBuiltinFunction(new ListStar());
 // addBuiltinFunction(new ListRef());
 addBuiltinFunction(new ListHuh());
 // addBuiltinFunction(new MakeList());
-// addBuiltinFunction(new Member());
-// addBuiltinFunction(new MemberHuh());
+addBuiltinFunction(new Member());
+addBuiltInFunctionAlias(new Member(), 'member?');
 // addBuiltinFunction(new Memq());
 // addBuiltinFunction(new MemqHuh());
 // addBuiltinFunction(new Memv());
-addBuiltinFunction(new NullHuh());
+addBuiltInFunctionAlias(new EmptyHuh, 'null?');
 // addBuiltinFunction(new Range());
-// addBuiltinFunction(new Remove());
-// addBuiltinFunction(new RemoveAll());
+addBuiltinFunction(new Remove());
+addBuiltinFunction(new RemoveAll());
 addBuiltinFunction(new Rest());
 addBuiltinFunction(new Reverse());
 addBuiltinFunction(new Second());
@@ -2096,7 +2264,7 @@ addBuiltinFunction(new Substring());
 // addBuiltinFunction(new Eof());
 // addBuiltinFunction(new EofObjectHuh());
 // addBuiltinFunction(new EqHuh());
-// addBuiltinFunction(new EqualHuh());
+addBuiltinFunction(new EqualHuh());
 // addBuiltinFunction(new EqualSymTildaHuh());
 // addBuiltinFunction(new EqvHuh());
 // addBuiltinFunction(new Error());
