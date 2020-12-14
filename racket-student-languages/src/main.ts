@@ -3,6 +3,9 @@ import racket from './racket.js';
 // @ts-ignore
 var editor = ace.edit('editor');
 editor.setTheme('ace/theme/racket');
+editor.setOptions({
+  fontSize: '11pt'
+});
 editor.session.setMode('ace/mode/racket');
 
 function run() {
