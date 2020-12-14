@@ -2,5 +2,6 @@ ace/*
 dist/
 node_modules/
 tsconfig.tsbuildinfo
+!ace/LICENSE
 !ace/mode-racket.js
 !ace/theme-racket.js
