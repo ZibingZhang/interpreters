@@ -20,6 +20,7 @@ import {
   isCallable,
   isList,
   isNumber,
+  isStructure,
   RACKET_TRUE
 } from './values.js';
 
@@ -41,6 +42,8 @@ export default class Resolver implements ir1.StmtVisitor {
         this.symbolTable.define(name, RacketValueType.BUILTIN_LITERAL);
       } else if (isCallable(value)) {
         this.symbolTable.define(name, RacketValueType.BUILTIN_FUNCTION);
+      } else if (isStructure(value)) {
+        this.symbolTable.define(name, RacketValueType.STRUCTURE);
       } else {
         throw new UnreachableCode();
       }

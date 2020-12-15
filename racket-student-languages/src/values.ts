@@ -984,6 +984,10 @@ export function isExact(number: any): number is RacketExactNumber {
   return number instanceof RacketExactNumber;
 }
 
+export function isExactNonnegativeInteger(object: any): object is RacketExactNumber {
+  return object instanceof RacketExactNumber && object.denominator === 1n;
+}
+
 export function isInstance(object: any): object is RacketInstance {
   return object instanceof RacketInstance;
 }

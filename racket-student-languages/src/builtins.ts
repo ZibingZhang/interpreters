@@ -8,6 +8,7 @@ import {
   isConstructed,
   isEmpty,
   isExact,
+  isExactNonnegativeInteger,
   isInexact,
   isInexactFloat,
   isInstance,
@@ -1212,7 +1213,7 @@ class List extends RacketBuiltInFunction {
  * Purpose Statement:
  *    Constructs a list by adding multiple items to a list.
  */
-class ListStar extends RacketBuiltInFunction {
+class ListSymStar extends RacketBuiltInFunction {
   constructor() {
     super('list*', 1, Infinity);
   }
@@ -1224,6 +1225,41 @@ class ListStar extends RacketBuiltInFunction {
       list = new RacketConstructedList(args[idx], list);
     }
     return list;
+  }
+}
+
+/* Signature:
+ *  (list-ref x i) → any/c
+ *    x : list?
+ *    l : natural?
+ * Purpose Statement:
+ *    Extracts the indexed item from the list.
+ */
+class ListRef extends RacketBuiltInFunction {
+  constructor() {
+    super('list-ref', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketValue {
+    super.call(args);
+    let list = args[0];
+    if (!isConstructed(list)) {
+      this.error(`list-ref: expects a pair as 1st argument, given ${list.toString()}`);
+    }
+    let indexValue = assertNthExactNonnegativeInteger(this.name, args[1], 2);
+    let index = indexValue.numerator;
+    while (isConstructed(list)) {
+      if (index === 0n) {
+        return list.first;
+      } else {
+        list = list.rest;
+        index--;
+      }
+    }
+    let errMsg = 'list-ref: index too large for list\n';
+    errMsg += `  index: ${indexValue.toString()}\n`;
+    errMsg += `  in: ${args[0].toString()}`;
+    this.error(errMsg);
   }
 }
 
@@ -1241,6 +1277,31 @@ class ListHuh extends RacketBuiltInFunction {
   call(args: RacketValue[]): RacketList {
     super.call(args);
     return toRacketBoolean(isList(args[0]));
+  }
+}
+
+/* Signature:
+ *  (make-list i x) → list?
+ *    i : natual-number
+ *    x : any/c
+ * Purpose Statement:
+ *    Constructs a list of `i` copies of `x`.
+ */
+class MakeList extends RacketBuiltInFunction {
+  constructor() {
+    super('make-list', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    let count = assertNthExactNonnegativeInteger(this.name, args[0], 1).numerator;
+    let element = args[1];
+    let list = RACKET_EMPTY_LIST;
+    for (; count > 0; count--) {
+      // the elements are eq?
+      list = new RacketConstructedList(element, list);
+    }
+    return list;
   }
 }
 
@@ -1487,8 +1548,6 @@ class Third extends RacketBuiltInFunction {
 * String Functions
 * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
-// TODO: functions which expect naturals should not accept inexact non-negative integers
-
 /* Signature:
  *  (string-append s t z ...) → string
  *    s : string
@@ -1528,8 +1587,10 @@ class StringIth extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketString {
     super.call(args);
-    let string = assertNthString(this.name, args[0], 1).value;
-    let index = assertNthNatural(this.name, args[1], 2);
+    let string = assertNthStrString(this.name, args[0], 1).value;
+    assertNthStrNatural(this.name, args[1], 2);
+    // string-ith calls string-ref
+    let index = assertNthExactNonnegativeInteger('string-ref', args[1], 2);
     if (!(index.numerator < string.length)) {
       this.error(`string-ith: expected an exact integer in [0, ${string.length}) (i.e., less than the length of the given string) for the second argument, but received ${index.toString()}`)
     }
@@ -1590,10 +1651,10 @@ class Substring extends RacketBuiltInFunction {
 
   call(args: RacketValue[]): RacketString {
     super.call(args);
-    let stringValue = assertNthString(this.name, args[0], 1);
+    let stringValue = assertNthStrString(this.name, args[0], 1);
     let string = stringValue.value;
-    let startValue = assertNthNatural(this.name, args[1], 2);
-    let endValue = args.length === 3 ? assertNthNatural(this.name, args[2], 3) : new RacketExactNumber(BigInt(string.length), 1n);
+    let startValue = assertNthExactNonnegativeInteger(this.name, args[1], 2);
+    let endValue = args.length === 3 ? assertNthExactNonnegativeInteger(this.name, args[2], 3) : new RacketExactNumber(BigInt(string.length), 1n);
     let start = startValue.numerator;
     let end = endValue.numerator;
     if (start > string.length) {
@@ -1829,12 +1890,25 @@ function assertSecondList(name: string, args: RacketValue[]): RacketList {
 }
 
 /**
+ * Assert that the nth argument is an exact nonnegative integer.
+ * @param name the name of the function
+ * @param arg the received argument
+ * @param nth the position of the argument
+ */
+function assertNthExactNonnegativeInteger(name: string, arg: RacketValue, nth: number): RacketExactNumber {
+  if (!isExactNonnegativeInteger(arg)) {
+    error(`${name}: expects an exact-nonnegative-integer as ${ordinal(nth)} argument, given ${arg.toString()}`)
+  }
+  return arg;
+}
+
+/**
  * Assert that the nth argument is a natural number.
  * @param name the name of the function
  * @param arg the received argument
  * @param nth the position of the argument
  */
-function assertNthNatural(name: string, arg: RacketValue, nth: number): RacketExactNumber | RacketInexactFraction {
+function assertNthStrNatural(name: string, arg: RacketValue, nth: number): RacketExactNumber | RacketInexactFraction {
   if (!isNatural(arg)) {
     error(`${name}: expected a natural number for the ${nthString(nth)} argument, but received ${arg.toString()}`)
   }
@@ -1847,7 +1921,7 @@ function assertNthNatural(name: string, arg: RacketValue, nth: number): RacketEx
  * @param arg the received argument
  * @param nth the position of the argument
  */
-function assertNthString(name: string, arg: RacketValue, nth: number): RacketString {
+function assertNthStrString(name: string, arg: RacketValue, nth: number): RacketString {
   if (!isString(arg)) {
     error(`${name}: expected a natural number for the ${nthString(nth)} argument, but received ${arg.toString()}`)
   }
@@ -2066,6 +2140,10 @@ function addBuiltInStructure(structure: RacketStructure): void {
   let makeFunction = structure.makeFunction();
   let isInstanceFunction = structure.isInstanceFunction();
   let getFunctions = structure.getFunctions();
+  // in BSL, posn is an undefined variable
+  // (posn) throws an error and asks if you meant to do make-posn
+  // (define posn 1) throws an error and says the name was defined
+  BUILT_INS.set(name, structure);
   BUILT_INS.set('make-' + name, makeFunction);
   BUILT_INS.set(name + '?', isInstanceFunction);
   for (let i = 0; i < fields.length; i++) {
@@ -2178,10 +2256,10 @@ addBuiltinFunction(new First());
 addBuiltinFunction(new Fourth());
 addBuiltinFunction(new Length());
 addBuiltinFunction(new List());
-addBuiltinFunction(new ListStar());
-// addBuiltinFunction(new ListRef());
+addBuiltinFunction(new ListSymStar());
+addBuiltinFunction(new ListRef());
 addBuiltinFunction(new ListHuh());
-// addBuiltinFunction(new MakeList());
+addBuiltinFunction(new MakeList());
 addBuiltinFunction(new Member());
 addBuiltInFunctionAlias(new Member(), 'member?');
 // addBuiltinFunction(new Memq());
