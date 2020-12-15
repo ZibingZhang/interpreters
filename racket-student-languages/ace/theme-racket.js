@@ -57,10 +57,10 @@ color: rgb(109, 121, 222);\
 color: rgb(49, 132, 149);\
 }\
 .ace-racket .ace_string {\
-color: rgb(127, 153, 51);\
+color: rgb(0, 128, 0);\
 }\
 .ace-racket .ace_comment {\
-color: rgb(76, 136, 107);\
+color: rgb(186, 154, 31);\
 }\
 .ace-racket .ace_comment.ace_doc {\
 color: rgb(0, 102, 255);\
@@ -105,6 +105,12 @@ border: 1px solid rgb(200, 200, 250);\
 }\
 .ace-racket .ace_string.ace_regex {\
 color: rgb(192, 0, 192);\
+}\
+.ace-racket .ace_lparen {\
+color: rgb(31, 141, 186);\
+}\
+.ace-racket .ace_rparen {\
+color: rgb(31, 141, 186);\
 }\
 .ace-racket .ace_indent-guide {\
 background: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAE0lEQVQImWP4////f4bLly//BwAmVgd1/w11/gAAAABJRU5ErkJggg==\") right repeat-y;\
