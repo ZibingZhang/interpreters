@@ -1549,6 +1549,28 @@ class Third extends RacketBuiltInFunction {
 * -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - */
 
 /* Signature:
+ *  (explode s) → (listof string)
+ *    s : string
+ * Purpose Statement:
+ *    Translates a string into a list of 1-letter strings.
+ */
+class Explode extends RacketBuiltInFunction {
+  constructor() {
+    super('explode', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketList {
+    super.call(args);
+    let string = assertListOfStrings(this.name, args)[0];
+    let list = RACKET_EMPTY_LIST;
+    for (let letter of string.value) {
+      list = new RacketConstructedList(new RacketString(letter), list);
+    }
+    return list;
+  }
+}
+
+/* Signature:
  *  (string-append s t z ...) → string
  *    s : string
  *    t : string
@@ -1572,6 +1594,60 @@ class StringAppend extends RacketBuiltInFunction {
   }
 }
 
+/* Signature:
+ *  (string-contains? s) → boolean?
+ *    s : string
+ *    t : string
+ * Purpose Statement:
+ *    Determines whether the first string appears literally in the second one.
+ */
+class StringContainsHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('string-contains?', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let strings = assertListOfStrings(this.name, args);
+    return toRacketBoolean(strings[1].value.includes(strings[0].value));
+  }
+}
+
+/* Signature:
+ *  (string-copy s) → string
+ *    s : string
+ * Purpose Statement:
+ *    Copies a string.
+ */
+class StringCopy extends RacketBuiltInFunction {
+  constructor() {
+    super('string-copy', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketString {
+    super.call(args);
+    let string = assertListOfStrings(this.name, args)[0];
+    return new RacketString(string.value);
+  }
+}
+
+/* Signature:
+ *  (string-downcase s) → 1string?
+ *    s : string
+ * Purpose Statement:
+ *    Produces a string like the given one with all 'letters' as lower case.
+ */
+class StringDowncase extends RacketBuiltInFunction {
+  constructor() {
+    super('string-downcase', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketString {
+    super.call(args);
+    let string = assertListOfStrings(this.name, args)[0];
+    return new RacketString(string.value.toLowerCase());
+  }
+}
 
 /* Signature:
  *  (string-ith s i) → 1string?
@@ -1617,6 +1693,64 @@ class StringLength extends RacketBuiltInFunction {
 }
 
 /* Signature:
+ *  (string-upcase s) → nat
+ *    s : string
+ * Purpose Statement:
+ *    Produces a string like the given one with all 'letters' as upper case.
+ */
+class StringUpcase extends RacketBuiltInFunction {
+  constructor() {
+    super('string-upcase', 1, 1);
+  }
+
+  call(args: RacketValue[]): RacketString {
+    super.call(args);
+    let string = assertListOfStrings(this.name, args)[0];
+    return new RacketString(string.value.toUpperCase());
+  }
+}
+
+/* Signature:
+ *  (string<=? s t) → boolean?
+ *    s : string
+ *    t : string
+ * Purpose Statement:
+ *    Determines whether the strings are ordered in a lexicographically
+ *    increasing manner.
+ */
+class StringSymLeqHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('string<=?', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let strings = assertListOfStrings(this.name, args);
+    return toRacketBoolean(strings[0].value <= strings[1].value);
+  }
+}
+
+/* Signature:
+ *  (string<? s t) → boolean?
+ *    s : string
+ *    t : string
+ * Purpose Statement:
+ *    Determines whether the strings are ordered in a lexicographically
+ *    strictly increasing manner.
+ */
+class StringSymLtHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('string<?', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let strings = assertListOfStrings(this.name, args);
+    return toRacketBoolean(strings[0].value < strings[1].value);
+  }
+}
+
+/* Signature:
  *  (string=? s t) → boolean?
  *    s : string
  *    t : string
@@ -1632,6 +1766,46 @@ class StringSymEqHuh extends RacketBuiltInFunction {
     super.call(args);
     let strings = assertListOfStrings(this.name, args);
     return toRacketBoolean(strings[0].equals(strings[1]));
+  }
+}
+
+/* Signature:
+ *  (string>=? s t) → boolean?
+ *    s : string
+ *    t : string
+ * Purpose Statement:
+ *    Determines whether the strings are ordered in a lexicographically
+ *    decreasing manner.
+ */
+class StringSymGeqHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('string>=?', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let strings = assertListOfStrings(this.name, args);
+    return toRacketBoolean(strings[0].value >= strings[1].value);
+  }
+}
+
+/* Signature:
+ *  (string<? s t) → boolean?
+ *    s : string
+ *    t : string
+ * Purpose Statement:
+ *    Determines whether the strings are ordered in a lexicographically
+ *    strictly decreasing manner.
+ */
+class StringSymGtHuh extends RacketBuiltInFunction {
+  constructor() {
+    super('string>?', 2, 2);
+  }
+
+  call(args: RacketValue[]): RacketBoolean {
+    super.call(args);
+    let strings = assertListOfStrings(this.name, args);
+    return toRacketBoolean(strings[0].value > strings[1].value);
   }
 }
 
@@ -2296,7 +2470,7 @@ addBuiltinFunction(new Third());
 // addBuiltinFunction(new CharSymGtHuh());
 // addBuiltinFunction(new CharHuh());
 /* String Functions */
-// addBuiltinFunction(new Explode());
+addBuiltinFunction(new Explode());
 // addBuiltinFunction(new Format());
 // addBuiltinFunction(new Implode());
 // addBuiltinFunction(new IntToString());
@@ -2316,22 +2490,22 @@ addBuiltinFunction(new StringAppend());
 // addBuiltinFunction(new StringCiSymGeqHuh());
 // addBuiltinFunction(new StringCiSymGtHuh());
 // addBuiltinFunction(new StringContainsCiHuh());
-// addBuiltinFunction(new StringContainsHuh());
-// addBuiltinFunction(new StringCopy());
-// addBuiltinFunction(new StringDowncase());
+addBuiltinFunction(new StringContainsHuh());
+addBuiltinFunction(new StringCopy());
+addBuiltinFunction(new StringDowncase());
 addBuiltinFunction(new StringIth());
 addBuiltinFunction(new StringLength());
 // addBuiltinFunction(new StringLowerCaseHuh());
 // addBuiltinFunction(new StringNumericHuh());
 // addBuiltinFunction(new StringRef());
-// addBuiltinFunction(new StringUpcase());
+addBuiltinFunction(new StringUpcase());
 // addBuiltinFunction(new StringUpperCaseHuh());
 // addBuiltinFunction(new StringWhitespaceHuh());
-// addBuiltinFunction(new StringSymLeqHuh());
-// addBuiltinFunction(new StringSymLtHuh());
+addBuiltinFunction(new StringSymLeqHuh());
+addBuiltinFunction(new StringSymLtHuh());
 addBuiltinFunction(new StringSymEqHuh());
-// addBuiltinFunction(new StringSymGeqHuh());
-// addBuiltinFunction(new StringSymGeHuh());
+addBuiltinFunction(new StringSymGeqHuh());
+addBuiltinFunction(new StringSymGtHuh());
 addBuiltinFunction(new StringHuh());
 addBuiltinFunction(new Substring());
 /* Image Functions */
