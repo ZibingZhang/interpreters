@@ -3,6 +3,8 @@ The end goal behind this project is to create an web based IDE that can run the 
 Ideally it would support up to [Intermediate Student with `lambda`](https://docs.racket-lang.org/htdp-langs/intermediate-lam.html) along with [Images](https://docs.racket-lang.org/teachpack/2htdpimage.html) and [Worlds and the Universe](https://docs.racket-lang.org/teachpack/2htdpuniverse.html).
 It currently only supports a subset of the [Beginning Student Language](https://docs.racket-lang.org/htdp-langs/beginner.html).
 
+A hosted version of the code can be found [here](https://zibingzhang.com/racket/).
+
 # Table of Contents
 * [Racket Student Languages](#racket-student-languages)
 * [Table of Contents](#table-of-contents)
