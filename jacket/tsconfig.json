@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    /* Basic Options */
+    "incremental": true,
+    "module": "commonjs",
+    "target": "ES6",
+    "outDir": "dist",
+    "baseUrl": "./",
+    /* Additional Checks */
+    "noUnusedLocals": true,
+    "noImplicitReturns": true
+  },
+  "include": [
+    "./*.ts"
+  ],
+  "exclude": [
+    "dist/",
+    "node_modules/"
+  ]
+}
